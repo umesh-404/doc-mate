@@ -5,13 +5,15 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict
 
 from app.db.models import UserRole
 
 
 class UserBase(BaseModel):
-    email: EmailStr
+    # Plain str (not EmailStr): demo/staff logins use short handles like
+    # "reception@demo" that are intentionally not RFC-valid addresses.
+    email: str
     full_name: str | None = None
     role: UserRole
 

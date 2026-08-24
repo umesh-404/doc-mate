@@ -167,7 +167,7 @@ const en: Dictionary = {
   login: {
     heading: "Sign in to Doc-mate",
     subheading: "Patient-context engine for high-volume clinics.",
-    demoHint: "Demo accounts: reception@demo.in / doctor@demo.in",
+    demoHint: "Demo accounts: reception@demo / doctor@demo",
     failed: "Sign in failed. Check your credentials and try again.",
   },
   nav: {
@@ -297,7 +297,7 @@ const hi: Dictionary = {
   login: {
     heading: "Doc-mate में साइन इन करें",
     subheading: "अधिक भीड़ वाले क्लिनिकों के लिए मरीज़-संदर्भ इंजन।",
-    demoHint: "डेमो खाते: reception@demo.in / doctor@demo.in",
+    demoHint: "डेमो खाते: reception@demo / doctor@demo",
     failed: "साइन इन विफल रहा। कृपया अपनी जानकारी जाँचें।",
   },
   nav: {
@@ -427,7 +427,7 @@ const ta: Dictionary = {
   login: {
     heading: "Doc-mate இல் உள்நுழைக",
     subheading: "அதிக நோயாளர் கொண்ட மருத்துவமனைகளுக்கான நோயாளர்-சூழல் இயந்திரம்.",
-    demoHint: "டெமோ கணக்குகள்: reception@demo.in / doctor@demo.in",
+    demoHint: "டெமோ கணக்குகள்: reception@demo / doctor@demo",
     failed: "உள்நுழைவு தோல்வி. உங்கள் விவரங்களைச் சரிபார்க்கவும்.",
   },
   nav: {
