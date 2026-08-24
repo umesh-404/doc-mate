@@ -13,7 +13,7 @@ export default function DoctorPatientsPage() {
           {t.nav.patients}
         </h1>
         <p className="text-sm text-muted">
-          Open a patient to read their snapshot.
+          {t.patients.subtitleDoctor}
         </p>
       </div>
       <PatientList basePath="/doctor/patients" />

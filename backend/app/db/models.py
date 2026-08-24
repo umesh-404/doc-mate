@@ -100,6 +100,10 @@ class Patient(TimestampMixin, Base):
         String(32), unique=True, index=True, nullable=True
     )
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # ``sex`` and ``age`` mirror the API contract; ``gender``/``date_of_birth``
+    # remain for richer FHIR-aligned demographics when available.
+    sex: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    age: Mapped[int | None] = mapped_column(Integer, nullable=True)
     gender: Mapped[str | None] = mapped_column(String(32), nullable=True)
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
@@ -280,11 +284,13 @@ class Summary(TimestampMixin, Base):
     __tablename__ = "summaries"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    encounter_id: Mapped[uuid.UUID] = mapped_column(
+    # Summaries are patient-scoped in the API contract; the encounter link is
+    # optional so a snapshot can be generated without an open encounter.
+    encounter_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("encounters.id", ondelete="CASCADE"),
         index=True,
-        nullable=False,
+        nullable=True,
     )
     patient_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

@@ -1,7 +1,7 @@
 "use client";
 
 import { FileImage, FileText, ScanLine, UploadCloud, X } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
@@ -41,34 +41,51 @@ function formatSize(bytes: number): string {
 }
 
 /**
- * Multi-file upload staging UI. Accepts typed-document photos, lab PDFs and
- * scan films. This is UI only for now — files are staged client-side and
- * would be POSTed to the ingestion endpoint on submit.
+ * Multi-file upload UI. Accepts typed-document photos, lab PDFs and scan films.
+ *
+ * Two modes:
+ *  - Staging mode (`files` + `onChange`): files are held client-side.
+ *  - Immediate mode (`onUpload`): files are handed to the parent as soon as they
+ *    are picked/dropped, which POSTs them to /documents. The staged list is not
+ *    rendered in this mode — the parent shows the real uploaded documents.
  */
 export function UploadDropzone({
   files,
   onChange,
+  onUpload,
+  busy,
 }: {
-  files: StagedFile[];
-  onChange: (files: StagedFile[]) => void;
+  files?: StagedFile[];
+  onChange?: (files: StagedFile[]) => void;
+  onUpload?: (files: File[]) => void;
+  busy?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const staged = useMemo(() => files ?? [], [files]);
 
   const addFiles = useCallback(
     (list: FileList | null) => {
-      if (!list) return;
-      const staged: StagedFile[] = Array.from(list).map((file) => ({
-        id: `${file.name}-${file.size}-${crypto.randomUUID()}`,
-        file,
-        kind: classify(file),
-      }));
-      onChange([...files, ...staged]);
+      if (!list || list.length === 0) return;
+      const arr = Array.from(list);
+      if (onUpload) {
+        onUpload(arr);
+        return;
+      }
+      if (onChange) {
+        const next: StagedFile[] = arr.map((file) => ({
+          id: `${file.name}-${file.size}-${crypto.randomUUID()}`,
+          file,
+          kind: classify(file),
+        }));
+        onChange([...staged, ...next]);
+      }
     },
-    [files, onChange],
+    [staged, onChange, onUpload],
   );
 
-  const remove = (id: string) => onChange(files.filter((f) => f.id !== id));
+  const remove = (id: string) =>
+    onChange?.(staged.filter((f) => f.id !== id));
 
   return (
     <div className="flex flex-col gap-3">
@@ -110,15 +127,19 @@ export function UploadDropzone({
           ref={inputRef}
           type="file"
           multiple
+          disabled={busy}
           accept="image/*,application/pdf,.dcm"
           className="hidden"
-          onChange={(e) => addFiles(e.target.files)}
+          onChange={(e) => {
+            addFiles(e.target.files);
+            e.target.value = "";
+          }}
         />
       </div>
 
-      {files.length > 0 && (
+      {staged.length > 0 && (
         <ul className="flex flex-col gap-2">
-          {files.map((f) => (
+          {staged.map((f) => (
             <li
               key={f.id}
               className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 py-2"

@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, documents, patients, users
+from app.api import auth, documents, patients, summaries, users
 from app.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -46,6 +46,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(patients.router)
 app.include_router(documents.router)
+app.include_router(summaries.router)
 app.include_router(users.router)
 
 

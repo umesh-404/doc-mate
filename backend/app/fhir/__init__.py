@@ -1,3 +1,3 @@
-"""FHIR mapping package: internal models <-> FHIR-shaped resources
-(Patient, Encounter, Observation, MedicationRequest, ...). Stub for now.
+"""FHIR mapping package: internal models <-> FHIR-shaped resource names
+(Observation, MedicationRequest, ...). See :mod:`app.fhir.mapping`.
 """

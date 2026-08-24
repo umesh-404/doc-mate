@@ -6,6 +6,16 @@
  * token on every request. Never put patient data or tokens in URLs.
  */
 
+import type {
+  ClinicalItem,
+  DocumentDetail,
+  DocumentSummary,
+  NewPatient,
+  Patient,
+  Summary,
+  SummaryGenerateResponse,
+} from "./types";
+
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
 
@@ -130,5 +140,71 @@ export const api = {
 
   upload<T>(path: string, form: FormData): Promise<T> {
     return request<T>(path, { method: "POST", body: form });
+  },
+
+  /* ---- Patients ---- */
+
+  listPatients(): Promise<Patient[]> {
+    return request<Patient[]>("/patients");
+  },
+
+  createPatient(body: NewPatient): Promise<Patient> {
+    return request<Patient>("/patients", { method: "POST", body });
+  },
+
+  getPatient(id: string): Promise<Patient> {
+    return request<Patient>(`/patients/${id}`);
+  },
+
+  /* ---- Documents ---- */
+
+  listDocuments(patientId: string): Promise<DocumentSummary[]> {
+    return request<DocumentSummary[]>(
+      `/documents?patient_id=${encodeURIComponent(patientId)}`,
+    );
+  },
+
+  getDocument(id: string): Promise<DocumentDetail> {
+    return request<DocumentDetail>(`/documents/${id}`);
+  },
+
+  uploadDocument(input: {
+    patientId: string;
+    file: File;
+    docType?: string;
+    encounterId?: string;
+  }): Promise<DocumentSummary> {
+    const form = new FormData();
+    form.set("patient_id", input.patientId);
+    form.set("file", input.file);
+    if (input.docType) form.set("doc_type", input.docType);
+    if (input.encounterId) form.set("encounter_id", input.encounterId);
+    return request<DocumentSummary>("/documents", {
+      method: "POST",
+      body: form,
+    });
+  },
+
+  verifyDocument(
+    id: string,
+    itemIds?: ClinicalItem["id"][],
+  ): Promise<DocumentDetail> {
+    return request<DocumentDetail>(`/documents/${id}/verify`, {
+      method: "POST",
+      body: itemIds && itemIds.length > 0 ? { item_ids: itemIds } : {},
+    });
+  },
+
+  /* ---- Summary ---- */
+
+  generateSummary(patientId: string): Promise<SummaryGenerateResponse> {
+    return request<SummaryGenerateResponse>(
+      `/patients/${patientId}/summary`,
+      { method: "POST" },
+    );
+  },
+
+  getSummary(patientId: string): Promise<Summary> {
+    return request<Summary>(`/patients/${patientId}/summary`);
   },
 };

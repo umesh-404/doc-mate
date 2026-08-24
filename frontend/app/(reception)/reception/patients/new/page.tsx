@@ -1,28 +1,60 @@
 "use client";
 
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { RequireRole } from "@/components/RequireRole";
-import { UploadDropzone, type StagedFile } from "@/components/UploadDropzone";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { localeNames, locales } from "@/lib/i18n/dictionaries";
+import { useCreatePatient } from "@/lib/queries";
+import type { NewPatient, Sex } from "@/lib/types";
 
 export default function NewPatientPage() {
   const { t } = useI18n();
-  const [files, setFiles] = useState<StagedFile[]>([]);
-  const [submitted, setSubmitted] = useState(false);
-  const [notes, setNotes] = useState("");
+  const router = useRouter();
+  const createPatient = useCreatePatient();
+  const [error, setError] = useState<string | null>(null);
 
-  function onSubmit(e: React.FormEvent) {
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // UI only: in the real flow this creates the patient/encounter and POSTs
-    // each staged file to the ingestion endpoint. We just acknowledge here.
-    setSubmitted(true);
+    setError(null);
+    const form = new FormData(e.currentTarget);
+
+    const fullName = String(form.get("fullName") ?? "").trim();
+    if (!fullName) return;
+
+    const ageRaw = String(form.get("age") ?? "").trim();
+    const abha = String(form.get("abhaId") ?? "").trim();
+    const phone = String(form.get("phone") ?? "").trim();
+
+    const body: NewPatient = {
+      full_name: fullName,
+      sex: (String(form.get("sex") ?? "M") as Sex) || undefined,
+      preferred_language: String(form.get("lang") ?? "en"),
+    };
+    if (ageRaw) {
+      const n = Number(ageRaw);
+      if (!Number.isNaN(n)) body.age = n;
+    }
+    if (abha) body.abha_id = abha;
+    if (phone) body.phone = phone;
+
+    createPatient.mutate(body, {
+      onSuccess: (patient) => {
+        router.push(`/reception/patients/${patient.id}`);
+      },
+      onError: (err) => {
+        setError(err instanceof ApiError ? err.message : t.newPatient.createError);
+      },
+    });
   }
+
+  const submitting = createPatient.isPending;
 
   return (
     <RequireRole role="reception">
@@ -39,36 +71,32 @@ export default function NewPatientPage() {
       <h1 className="text-2xl font-semibold tracking-tight">
         {t.nav.newPatient}
       </h1>
-      <p className="mb-6 text-sm text-muted">
-        Enter what you know and upload everything available. The system ingests
-        and indexes it for the doctor.
-      </p>
-
-      {submitted && (
-        <div
-          role="status"
-          className="mb-6 flex items-center gap-2 rounded-md border border-success/30 bg-success-surface px-4 py-3 text-sm text-success"
-        >
-          <CheckCircle2 className="h-4 w-4" aria-hidden />
-          Patient registered and {files.length} file(s) queued for processing
-          (demo — no data sent).
-        </div>
-      )}
+      <p className="mb-6 text-sm text-muted">{t.newPatient.intro}</p>
 
       <form onSubmit={onSubmit} className="grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Patient details</CardTitle>
+              <CardTitle>{t.newPatient.detailsTitle}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input name="fullName" label="Full name" required />
-                <Input name="abhaId" label="ABHA ID" placeholder="14-digit" />
-                <Input name="age" label="Age" type="number" min={0} max={130} />
+                <Input name="fullName" label={t.newPatient.fullName} required />
+                <Input
+                  name="abhaId"
+                  label={t.newPatient.abhaId}
+                  placeholder={t.newPatient.abhaHint}
+                />
+                <Input
+                  name="age"
+                  label={t.newPatient.age}
+                  type="number"
+                  min={0}
+                  max={130}
+                />
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="sex" className="text-sm font-medium">
-                    Sex
+                    {t.newPatient.sex}
                   </label>
                   <select
                     id="sex"
@@ -76,15 +104,15 @@ export default function NewPatientPage() {
                     className="h-10 rounded-md border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
                     defaultValue="M"
                   >
-                    <option value="M">Male</option>
-                    <option value="F">Female</option>
-                    <option value="O">Other</option>
+                    <option value="M">{t.newPatient.male}</option>
+                    <option value="F">{t.newPatient.female}</option>
+                    <option value="O">{t.newPatient.other}</option>
                   </select>
                 </div>
-                <Input name="phone" label="Phone" type="tel" />
+                <Input name="phone" label={t.newPatient.phone} type="tel" />
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="lang" className="text-sm font-medium">
-                    Preferred language
+                    {t.newPatient.preferredLanguage}
                   </label>
                   <select
                     id="lang"
@@ -102,55 +130,32 @@ export default function NewPatientPage() {
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Reason for visit / typed notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <textarea
-                name="notes"
-                rows={4}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Current complaint, history, anything the patient tells you…"
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload records</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <UploadDropzone files={files} onChange={setFiles} />
-            </CardContent>
-          </Card>
         </div>
 
         <div className="lg:col-span-1">
           <Card className="lg:sticky lg:top-20">
             <CardHeader>
-              <CardTitle>Summary</CardTitle>
+              <CardTitle>{t.newPatient.summaryTitle}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted">Files staged</span>
-                <span className="font-medium">{files.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted">Typed notes</span>
-                <span className="font-medium">
-                  {notes.trim() ? "Yes" : "—"}
-                </span>
-              </div>
               <p className="text-xs leading-relaxed text-muted">
-                Extracted fields (medications, doses, labs) are shown as
-                <em> proposed</em> and verified here before the doctor sees them.
+                {t.newPatient.verifyNote}
               </p>
-              <Button type="submit" size="lg" className="mt-2 w-full">
-                Register &amp; queue for processing
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-md border border-danger/30 bg-danger-surface px-3 py-2 text-sm text-danger"
+                >
+                  {error}
+                </p>
+              )}
+              <Button
+                type="submit"
+                size="lg"
+                className="mt-2 w-full"
+                disabled={submitting}
+              >
+                {submitting ? t.newPatient.creating : t.newPatient.create}
               </Button>
             </CardContent>
           </Card>

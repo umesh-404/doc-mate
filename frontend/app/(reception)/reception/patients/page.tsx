@@ -17,7 +17,7 @@ export default function ReceptionPatientsPage() {
             {t.nav.patients}
           </h1>
           <p className="text-sm text-muted">
-            Register patients and upload their records for processing.
+            {t.patients.subtitleReception}
           </p>
         </div>
         <Link href="/reception/patients/new">
@@ -27,7 +27,7 @@ export default function ReceptionPatientsPage() {
           </Button>
         </Link>
       </div>
-      <PatientList />
+      <PatientList basePath="/reception/patients" />
     </RequireRole>
   );
 }

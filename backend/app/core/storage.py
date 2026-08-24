@@ -46,3 +46,9 @@ def put_object(key: str, body: bytes, content_type: str | None = None) -> None:
     get_s3_client().put_object(
         Bucket=settings.s3_bucket, Key=key, Body=body, **extra
     )
+
+
+def get_object(key: str) -> bytes:
+    """Download and return the raw bytes stored under ``key``."""
+    response = get_s3_client().get_object(Bucket=settings.s3_bucket, Key=key)
+    return response["Body"].read()

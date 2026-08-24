@@ -55,6 +55,34 @@ class Settings(BaseSettings):
         """CORS origins as a clean list."""
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
+    def provider_api_key(self) -> str | None:
+        """Look up the ``<PROVIDER>_API_KEY`` for the configured provider.
+
+        Read from the process environment (the same place LiteLLM reads keys
+        from). Returns ``None`` when unset so callers can fall back to stub
+        mode. Never logs or returns the value anywhere but here.
+        """
+        import os
+
+        provider = (self.llm_provider or "").strip().upper()
+        if not provider:
+            return None
+        return os.environ.get(f"{provider}_API_KEY") or None
+
+    @property
+    def llm_stub_mode(self) -> bool:
+        """True when the deterministic offline stubs should be used.
+
+        Stub mode is the default: it is active when no provider is configured,
+        the provider is explicitly ``stub``, or the provider's API key is not
+        present in the environment. This keeps the whole pipeline runnable
+        offline with no external credentials.
+        """
+        provider = (self.llm_provider or "").strip().lower()
+        if provider in ("", "stub"):
+            return True
+        return self.provider_api_key() is None
+
 
 @lru_cache
 def get_settings() -> Settings:
