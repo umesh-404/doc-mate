@@ -1,0 +1,57 @@
+# =============================================================================
+# Doc-mate backend — Fly.io config (ALTERNATIVE to Render)
+# =============================================================================
+# Render (../render.yaml) is the primary/recommended host. This file is a
+# ready-to-use alternative if you prefer Fly.io. To use it:
+#
+#   1. Install flyctl and `fly auth login`.
+#   2. From the repo root, launch WITHOUT creating a new config:
+#        fly launch --no-deploy --copy-config --dockerfile backend/Dockerfile
+#      (or copy this file to ./fly.toml first, then `fly deploy`).
+#   3. Provision managed Postgres WITH pgvector — recommended: Neon or Supabase
+#      (Fly Postgres also works but you must enable pgvector). Then set secrets:
+#        fly secrets set DATABASE_URL='postgresql+psycopg://USER:PASS@HOST/DB' \
+#          JWT_SECRET='...' CORS_ORIGINS='https://<your-app>.vercel.app' \
+#          S3_ENDPOINT='...' S3_BUCKET='...' S3_ACCESS_KEY='...' \
+#          S3_SECRET_KEY='...' S3_REGION='auto'
+#   4. `fly deploy`, then run `alembic upgrade head` + seed (see DEPLOYMENT.md).
+#
+# No secrets live in this file — they are set via `fly secrets set`.
+# The DATABASE_URL MUST use the SQLAlchemy driver prefix: postgresql+psycopg://
+# -----------------------------------------------------------------------------
+
+app = "docmate-backend"
+primary_region = "sin"  # Singapore — close to India; change as you like.
+
+[build]
+  dockerfile = "backend/Dockerfile"
+
+[env]
+  APP_NAME = "Doc-mate"
+  ENVIRONMENT = "production"
+  PORT = "8000"
+  WEB_CONCURRENCY = "2"
+  JWT_ALGORITHM = "HS256"
+  JWT_EXPIRY = "1440"
+  S3_REGION = "auto"
+  EMBEDDING_DIM = "1536"
+  # LLM_PROVIDER intentionally unset -> deterministic stub mode (no key needed).
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.checks]
+    [[http_service.checks.health]]
+      method = "GET"
+      path = "/health"
+      interval = "30s"
+      timeout = "5s"
+      grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

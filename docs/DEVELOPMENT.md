@@ -62,7 +62,7 @@ cp .env.example .env             # Windows (PowerShell): Copy-Item .env.example 
 
 # apply database migrations, then seed demo data
 alembic upgrade head
-python -m app.seed               # seeds demo users + sample patient (see note below)
+python -m scripts.seed           # seeds demo users + sample patient (see note below)
 
 # run the API with autoreload
 uvicorn app.main:app --reload --port 8000
