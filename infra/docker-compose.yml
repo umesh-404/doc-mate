@@ -1,0 +1,79 @@
+# Doc-mate — local development dependencies.
+#
+# Brings up the two backing services the stack needs to run locally:
+#   - postgres : PostgreSQL 16 with the pgvector extension (relational data + embeddings)
+#   - minio    : S3-compatible object storage for raw uploaded files
+#   - createbuckets : one-shot job that creates the `docmate` bucket, then exits
+#
+# Usage (run from the repo root):
+#   docker compose -f infra/docker-compose.yml up -d      # start
+#   docker compose -f infra/docker-compose.yml down       # stop (keeps data)
+#   docker compose -f infra/docker-compose.yml down -v    # stop + wipe data volumes
+#
+# Credentials and ports are documented in infra/README.md and mirrored in the
+# repo-root .env.example. These defaults are for local development ONLY.
+
+name: docmate
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: docmate-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: docmate
+      POSTGRES_PASSWORD: docmate
+      POSTGRES_DB: docmate
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Scripts here run once, in alphabetical order, on first initialization of
+      # an empty data directory. This enables the pgvector extension on boot.
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docmate -d docmate"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  minio:
+    image: minio/minio
+    container_name: docmate-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    volumes:
+      - minio-data:/data
+    # No healthcheck here to avoid false "unhealthy" states across image versions
+    # (tooling shipped in the image varies). The createbuckets job below waits for
+    # MinIO with its own retry loop, which is the readiness gate that matters.
+
+  # One-shot init job: waits for MinIO, then ensures the `docmate` bucket exists.
+  # Idempotent — safe to run repeatedly; exits 0 once the bucket is present.
+  createbuckets:
+    image: minio/mc
+    container_name: docmate-createbuckets
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do
+        echo 'waiting for minio...'; sleep 2;
+      done;
+      mc mb --ignore-existing local/docmate;
+      mc anonymous set none local/docmate;
+      echo 'bucket ready: docmate';
+      exit 0;
+      "
+
+volumes:
+  postgres-data:
+  minio-data:

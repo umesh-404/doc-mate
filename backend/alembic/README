@@ -1,0 +1,12 @@
+Alembic migrations for Doc-mate.
+
+The database URL comes from the DATABASE_URL environment variable (see
+app/core/config.py); alembic.ini's sqlalchemy.url is only a placeholder.
+
+Common commands (run from backend/):
+  alembic upgrade head        # apply all migrations
+  alembic downgrade -1        # roll back one
+  alembic revision --autogenerate -m "message"   # needs a reachable DB
+
+The initial migration (0001) enables the pgvector extension before creating
+tables, so it must run against a Postgres instance that has pgvector available.
