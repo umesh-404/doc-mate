@@ -7,10 +7,10 @@ import { localeNames } from "@/lib/i18n/dictionaries";
 import type { SummaryLang } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-export const SUMMARY_LANGS: SummaryLang[] = ["en", "hi", "ta"];
+export const SUMMARY_LANGS: SummaryLang[] = ["en", "hi", "ta", "te"];
 
 /**
- * Doctor-facing controls above the snapshot: language toggle (EN/HI/TA),
+ * Doctor-facing controls above the snapshot: language toggle (EN/HI/TA/TE),
  * patient-friendly narrative toggle, and export actions (FHIR download + print).
  * Hidden from print output via the `print:hidden` utility. Keyboard equivalents
  * are shown as key caps so the shortcuts are discoverable in place.

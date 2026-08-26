@@ -38,7 +38,7 @@ This is also your **reset button** between runs — it is idempotent, so re-runn
 never duplicates data. It seeds:
 
 - Demo logins: **`reception@demo`** and **`doctor@demo`**, password **`demo1234`**.
-- **5 synthetic patients** (clearly fake data), each chosen to show one strength.
+- **6 synthetic patients** (clearly fake data), each chosen to show one strength.
 - Documents across every type, mixed statuses (mostly verified, some extracted,
   one *failed* on purpose), realistic filenames and confidence values.
 - Clinical items linked to their source documents, and a **ready-made summary**
@@ -57,6 +57,7 @@ keys needed. Good for flaky venue wifi.
 | **Arjun Nair**, 24 M | EN | Acute 3-day fever, almost no history | **Fast intake** — useful even with thin records |
 | **Meena Kumari**, 27 F | HI | Antenatal follow-up, Hindi UI | **India-scale i18n** — the summary in the patient's language |
 | **Karthik Raman**, 45 M | TA | Documented **Penicillin allergy**, Tamil UI | **Safety** — allergy shown in red, prominent, cited |
+| **Anasuya Pothineni**, 62 F | TE | On warfarin from a cardiology discharge, arrives with an outside clinic's prescription for diclofenac, Telugu UI | **Medication safety** — a drug–drug interaction across two facilities' paperwork, caught and cited |
 | **Lakshmi Bai**, 55 F | HI | Referred with one faded photo + a broken upload | **Honest flags** — says what's missing, never bluffs |
 
 ---
@@ -93,9 +94,19 @@ keys needed. Good for flaky venue wifi.
    and at the top**, and the summary notes the antibiotic chosen was a
    non-penicillin alternative. *"This is the line that prevents a dangerous
    prescription."*
-10. Switch language / open **Meena Kumari** (Hindi) to show the **same structured
-    snapshot rendered in the patient's language**.
-11. Open **Lakshmi Bai** — the **sparse** patient. The snapshot is mostly the
+10. Open **Anasuya Pothineni** — the **interaction** case. Her discharge summary
+    has her on **warfarin**; the prescription she brought from an outside clinic
+    adds **diclofenac**. The two documents come from different facilities and
+    nothing in the paper file connects them — the snapshot puts a cited
+    interaction alert at the top. Say: *"Neither document is wrong on its own.
+    The collision only shows up when you read the whole record at once, which is
+    exactly the part a five-minute consult skips."*
+11. Switch language / open **Meena Kumari** (Hindi), **Karthik Raman** (Tamil) or
+    **Anasuya Pothineni** (Telugu) to show the **same structured snapshot
+    rendered in the patient's language**. EN / HI / TE / TA are all first-class:
+    the section titles and common clinical phrases are translated, and clinical
+    values, doses and citations are carried across verbatim.
+12. Open **Lakshmi Bai** — the **sparse** patient. The snapshot is mostly the
     **Flags** section: *"allergies and chronic conditions UNKNOWN — confirm at
     intake,"* and the **failed upload** is shown plainly, not hidden. Say: *"When
     data is missing or unreadable, Doc-mate says so. It never shows a confident
@@ -203,8 +214,11 @@ python -m scripts.seed_cohort 250   # optional size override
 
 What it adds (default size, verified numbers):
 
-- **100 synthetic patients**, varied Indian regions, ages 2–86, language mix
-  **en 55 / hi 30 / ta 15**.
+- **100 synthetic patients**, varied Indian regions (including Andhra /
+  Telangana name pools), ages 2–86, language mix
+  **en 48 / hi 27 / te 14 / ta 11**. Every language clears the K=5
+  suppression threshold, so the surveillance language panel shows a real
+  four-way mix rather than a suppressed cell.
 - **134 documents** — mostly `verified`, some `extracted`, a few `failed` with a
   plain reason, so the data-quality panel reports honest numbers instead of a
   suspiciously perfect 100%.
@@ -216,7 +230,8 @@ What it adds (default size, verified numbers):
   engineered **dengue cluster in the current week** (baseline ≈0.14 cases/week
   → 15 this week) so `/surveillance/signals` fires a single **`alert`**. Every
   other condition is kept flat, so exactly the intended signal appears.
-- A believable triage mix: **4 emergency, 20 urgent, 81 routine**.
+- A believable triage mix across all 106 seeded patients: **4 emergency,
+  21 urgent, 81 routine**.
 
 Deliberately **not** created: chunks/embeddings and summaries. These are
 background population for the aggregate views, not snapshot showcases — skipping
@@ -227,8 +242,8 @@ generates their snapshot on demand like any other patient.
 every run produces the same cohort — the outbreak lands on the same counts each
 time you rehearse. Patients are keyed by a cohort-only ABHA prefix (`90-…`),
 disjoint from the showcase ids, so re-running skips what already exists, never
-duplicates a row, and **never touches Rukmini, Arjun, Meena, Karthik or
-Lakshmi**.
+duplicates a row, and **never touches Rukmini, Arjun, Meena, Karthik, Anasuya
+or Lakshmi**.
 
 **Reset:** just re-run both seeders — they are both idempotent, so it is safe any
 time. For a truly clean slate, drop and recreate the database, `alembic upgrade

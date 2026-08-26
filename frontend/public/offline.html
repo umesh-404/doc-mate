@@ -10,7 +10,7 @@
     <!--
       Static fallback shown when a page is requested that has never been cached
       and the device is offline. It cannot reach the app's dictionary, so the
-      three supported languages are inlined. Deliberately dependency-free.
+      four supported languages are inlined. Deliberately dependency-free.
     -->
     <style>
       :root {
@@ -43,7 +43,8 @@
         background: var(--bg);
         color: var(--fg);
         font: 400 16px/1.6 "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
-          "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+          "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil",
+          "Noto Sans Telugu", sans-serif;
       }
       .card {
         width: 100%;
@@ -86,6 +87,7 @@
       <p>This screen has not been opened on this device yet, so there is no saved copy to show.</p>
       <p class="alt" lang="hi">आप ऑफ़लाइन हैं — इस स्क्रीन की कोई सहेजी हुई प्रति नहीं है।</p>
       <p class="alt" lang="ta">நீங்கள் ஆஃப்லைனில் உள்ளீர்கள் — இந்தத் திரையின் சேமிக்கப்பட்ட நகல் இல்லை.</p>
+      <p class="alt" lang="te">మీరు ఆఫ్‌లైన్‌లో ఉన్నారు — ఈ స్క్రీన్‌కు సేవ్ చేసిన ప్రతి లేదు.</p>
       <button type="button" onclick="location.reload()">Try again</button>
       <p class="note">
         Nothing has been lost. Patients and records you captured offline stay

@@ -34,7 +34,7 @@ def _template_plain(sections: list[dict], lang: str) -> str:
             continue
         label = labels.get(key, str(section.get("title", key)))
         # Translate the human label + free text via the glossary-safe helper so
-        # numbers/doses are preserved and Hindi/Tamil output reads naturally.
+        # numbers/doses are preserved and Hindi/Tamil/Telugu output reads naturally.
         body = "; ".join(translate.translate_text(t, lang) for t in items)
         parts.append(f"{label}: {body}.")
 

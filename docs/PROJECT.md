@@ -52,7 +52,8 @@ Seeded/synthetic hospital data. Not ABDM-certified — but architected so ABDM/A
 - RAG-based indexing + retrieval over a patient's longitudinal record.
 - Structured patient summary generation **with citations** to source documents.
 - Two roles: **Reception** (create patient, upload) and **Doctor** (read snapshot). Simple JWT auth.
-- Languages: **English + Hindi + Tamil** (the chosen regional language) for summaries and input handling.
+- Languages: **English + Hindi + Tamil + Telugu** (the chosen regional languages) for summaries and
+  input handling.
 - Cloud-deployable so judges can try it live. High-polish doctor UI.
 
 Built on top of that core, and now also in scope (all implemented — see §6c):
@@ -133,7 +134,7 @@ When in doubt, choose the option that keeps a human doctor in control and makes 
         │  Next.js frontend (App Router, TS, Tailwind)                 │
         │  - Reception: create patient, upload, verify extractions     │
         │  - Doctor: Patient Snapshot (the wow screen)                 │
-        │  - EN / HI / TA switcher, light+dark theme, voice capture    │
+        │  - EN/HI/TE/TA switcher, light+dark theme, voice capture     │
         └───────────────────────────┬──────────────────────────────────┘
                                     │ REST (auth: JWT bearer)
         ┌───────────────────────────▼──────────────────────────────────┐
@@ -248,8 +249,10 @@ Each of these is a package under `backend/app/`, deterministic and offline by de
   fabricating a code — no match returns an empty list, and codings are attached to FHIR resources only when they resolve.
   `fhir/abha.py` is a **mock** ABHA identity resolver: it returns a seeded, deterministic synthetic identity flagged
   `source="mock"`. It is not NHA integration.
-- **Multilingual + plain language** (`language/`) — translates the structured snapshot into **en / hi / ta**. Default
-  (stub) mode uses bundled glossary packs (`language/data/*.json`) for section titles and common clinical phrases;
+- **Multilingual + plain language** (`language/`) — translates the structured snapshot into **en / hi / te / ta**.
+  Default
+  (stub) mode uses bundled glossary packs (`language/data/*.json`) for section titles and common clinical phrases —
+  that caveat applies to Telugu exactly as it does to Hindi and Tamil;
   real mode routes through `app/llm`. Either way a clinical value is never altered: every translated string is checked
   against its source and, if a numeric or dose token went missing, the **original** text is kept. `simplify.py` produces a
   short patient-facing plain-language narrative from the same facts — still no diagnosis, still no advice.
@@ -364,7 +367,8 @@ doc-mate/
 - Tailwind CSS with a small hand-rolled UI kit in `components/ui/` (Button, Card, Badge, Input, Section, Skeleton,
   States) — no component library dependency; `lucide-react` for icons, `clsx` + `tailwind-merge` for class composition
 - TanStack Query for server state (including polling document status); React context for auth, theme and locale
-- i18n via bundled dictionaries + a `localStorage`-backed context (`lib/i18n/`) for EN/HI/TA — no i18n framework dependency
+- i18n via bundled dictionaries + a `localStorage`-backed context (`lib/i18n/`) for EN/HI/TE/TA — no i18n framework
+  dependency
 - Deploy target: Vercel
 
 **Backend**
@@ -489,7 +493,7 @@ Done:
 3. ✅ **Ingestion pipeline** — classify → extract → structure → verify UI → chunk + embed + index.
 4. ✅ **RAG summary** — retrieval + citation-grounded structured summary generation, with citation enforcement.
 5. ✅ **Doctor Snapshot UI** — the fast-read screen with citation chips, alerts, grounding badge and lab sparklines.
-6. ✅ **Languages** — EN/HI/TA snapshot translation + plain-language narrative (glossary-based by default).
+6. ✅ **Languages** — EN/HI/TE/TA snapshot translation + plain-language narrative (glossary-based by default).
 7. ✅ **Clinical safety** — grounding score, neutral alerts, offline drug-interaction and allergy checking.
 8. ✅ **Interoperability** — FHIR R4 bundle export, ICD-11/NAMASTE coding, mock ABHA lookup.
 9. ✅ **Governance** — consent records + real-time revocation, PHI-free append-only access audit, break-glass path.
@@ -509,7 +513,7 @@ Ahead:
     stub embeddings are deterministic hashes, so ranking only becomes meaningful with a provider.
 16. **Frontend for the API-only features** — triage queue, consent + audit panel, consult scribe, surveillance dashboard,
     and patient record search.
-17. **Real speech** — ship `faster-whisper` on-device and validate Hindi/Tamil intake audio.
+17. **Real speech** — ship `faster-whisper` on-device and validate Hindi, Tamil and Telugu intake audio.
 18. **Roadmap slides (not built):** ABDM/ABHA + FHIR sandbox integration and HIP/HIU consent flows, offline/PWA for rural
     clinics, self-hosted MedGemma-class models on-prem, real terminology services, queuing (Celery/RQ + Redis).
 
@@ -568,6 +572,19 @@ Ahead:
 - **UI is deliberately behind the API** for triage, surveillance, consult, governance and evaluation — the contracts are
   frozen and tested first.
 
+### 2026-08-26 (language set widened, same day)
+
+- **Telugu (`te`) is a first-class fourth language**, alongside `en`, `hi` and `ta`. Andhra Pradesh and Telangana are
+  among the largest catchments a southern district hospital serves, and the language layer was already list-driven —
+  a fourth glossary pack and a fourth switcher entry, not a redesign. The "one regional language" decision above
+  stands as written; this widens it rather than replacing it.
+- **The stub-mode caveat is unchanged and applies to Telugu identically**: glossary-based section titles and common
+  clinical phrases offline, full sentence-level translation only in real mode. Clinical values, doses and citations
+  are preserved verbatim in Telugu by the same check that protects Hindi and Tamil.
+- **Seed data carries the language too**, so the claim is demonstrable rather than declared: a Telugu showcase patient
+  in `scripts.seed_demo` and a Telugu share of the background cohort large enough to clear K=5 in the surveillance
+  language mix.
+
 ---
 
 ## 15. API surface
@@ -588,7 +605,7 @@ All routes require a JWT bearer token except `/`, `/health` and `/auth/login`. R
 | | `POST /documents/{id}/verify` | human-in-the-loop confirmation of items (audited) |
 | **Summary** | `POST /patients/{id}/summary` | 202; generates in the background (audited) |
 | | `GET /patients/{id}/summary` | latest snapshot incl. grounding + alerts (audited) |
-| **Language** | `GET /patients/{id}/summary/translated?lang=` | `en \| hi \| ta`; values/citations untouched |
+| **Language** | `GET /patients/{id}/summary/translated?lang=` | `en \| hi \| te \| ta`; values/citations untouched |
 | | `GET /patients/{id}/summary/plain?lang=` | patient-friendly narrative |
 | **Safety** | `GET /patients/{id}/interactions` | drug–drug + drug–allergy report over *verified* items |
 | **Search** | `POST /patients/{id}/search` | semantic search over that patient's chunks. POST, not GET: the query is patient content and must not reach a URL or access log (§4.6) |
@@ -620,7 +637,7 @@ Interactive docs: `/docs` on the running backend.
 **Built and working end-to-end (offline, no keys):** auth + roles; patient and document CRUD; upload to object storage;
 background ingestion (classify → extract → structure → chunk → embed → index); reception verification; citation-grounded
 summary generation with the clinical-safety pass; snapshot UI with citation chips, alerts, grounding badge, medication
-safety card, plain-language panel, sparklines, EN/HI/TA switching and light/dark theme; FHIR export; ICD-11/NAMASTE
+safety card, plain-language panel, sparklines, EN/HI/TE/TA switching and light/dark theme; FHIR export; ICD-11/NAMASTE
 coding; translation + simplification; voice intake endpoint; consultation scribe; consent + audit; quality evaluation;
 triage; surveillance. `backend/tests/` covers safety, interop, language/voice, governance, eval, triage, consult and
 surveillance, all offline; `scripts/e2e_smoke.py` exercises the real HTTP flow against a running backend.
@@ -634,12 +651,12 @@ surveillance, all offline; `scripts/e2e_smoke.py` exercises the real HTTP flow a
 | ABHA lookup | **Mock.** Deterministic synthetic identity, `source="mock"`. No NHA/ABDM integration, no real ABHA verification. |
 | FHIR output | Schema-plausible R4 (correct `resourceType`, working references). **Not validator-clean**: no ABDM India-profile extensions, light terminology binding. |
 | ICD-11 / NAMASTE | Small bundled code lists covering the demo vocabulary, not the full terminologies. |
-| Translation | Glossary-based in stub mode (section titles + common phrases). Full sentence-level MT needs real mode. |
+| Translation | Glossary-based in stub mode (section titles + common phrases) for every language, Telugu included. Full sentence-level MT needs real mode. |
 | Consent enforcement | Wired to the sensitive reads and fully working, but shipped in `audit_only` mode by default so the seeded demo and smoke test are not blocked. Flip `CONSENT_ENFORCEMENT=enforce` to make it binding. |
 | Retrieval | Hybrid: exhaustive over structured clinical items (completeness beats top-k at OPD record size), plus pgvector similarity over narrative chunks above the threshold. In stub mode embeddings are deterministic hashes, so similarity *ranking* is not meaningful offline — the plumbing, isolation and citations are real, the semantics need a provider. |
 | Grounding / eval scores | Deterministic lexical + numeric heuristics, not NLI or LLM-judge. Defensible and auditable, but not state of the art. |
 | Surveillance signals | A documented naive trip-wire over aggregated counts. Demo-grade statistics requiring human review. |
-| Patient data | 100% synthetic. `scripts.seed_demo` (5 showcase patients) and `scripts.seed_cohort` (~100 background patients) — see [`DEMO.md`](DEMO.md). |
+| Patient data | 100% synthetic. `scripts.seed_demo` (6 showcase patients, spanning en/hi/te/ta) and `scripts.seed_cohort` (~100 background patients on an uneven en 48 / hi 27 / te 14 / ta 11 mix) — see [`DEMO.md`](DEMO.md). |
 | Deployment | Deploy artifacts exist (`render.yaml`, `deploy/fly.toml`, Dockerfile, `vercel.json`) and CI runs, but **the system is not currently deployed** to a live URL. |
 | Frontend coverage | The reception and doctor flows are built. Triage, surveillance, consult, consent/audit and evaluation are **API-only so far** — no UI yet. |
 

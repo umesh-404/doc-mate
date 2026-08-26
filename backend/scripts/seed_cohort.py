@@ -34,7 +34,7 @@ What it creates (per cohort patient)
 ------------------------------------
 * A ``Patient`` with a clearly-synthetic Indian name (regions varied), age, sex,
   a cohort ABHA-style id, and a preferred language drawn from an uneven
-  ``en``/``hi``/``ta`` mix.
+  ``en``/``hi``/``te``/``ta`` mix.
 * 1-2 ``Document`` rows — mostly ``verified``, some ``extracted``, a few
   ``failed`` with a plain reason, so the data-quality panel reports honest
   numbers rather than a suspiciously perfect 100%.
@@ -125,6 +125,13 @@ _GIVEN_NAMES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
         ("Manisha", "Pallavi", "Snehal", "Vaishali", "Jyoti", "Bhavna"),
         ("Mahesh", "Nilesh", "Sachin", "Rohit", "Kiran", "Pravin"),
     ),
+    # Andhra Pradesh / Telangana. Added when Telugu became a first-class
+    # language: without it the cohort's Telugu speakers would all carry names
+    # from another region, which reads as an obvious seeding artefact.
+    "deccan": (
+        ("Padmavathi", "Sarojini", "Rajeswari", "Aruna", "Swaroopa", "Vijaya"),
+        ("Srinivas", "Venkatesh", "Koteswara", "Narasimha", "Sudhakar", "Ramakrishna"),
+    ),
 }
 
 _FAMILY_NAMES: dict[str, tuple[str, ...]] = {
@@ -132,14 +139,20 @@ _FAMILY_NAMES: dict[str, tuple[str, ...]] = {
     "south": ("Raman", "Iyer", "Naidu", "Pillai", "Reddy", "Krishnan"),
     "east": ("Das", "Ghosh", "Sarkar", "Mondal", "Chakraborty", "Bose"),
     "west": ("Patil", "Deshmukh", "Joshi", "Shah", "Kulkarni", "Gaikwad"),
+    "deccan": ("Vemula", "Chalasani", "Bandaru", "Gollapudi", "Yerragunta", "Kandula"),
 }
 
 _REGIONS = tuple(_GIVEN_NAMES)
 
-#: Uneven, plausible language mix for a north-Indian district hospital that
-#: also serves migrant workers: mostly English-charted, a large Hindi share and
-#: a smaller Tamil one.
-_LANGUAGE_MIX: tuple[tuple[str, int], ...] = (("en", 55), ("hi", 30), ("ta", 15))
+#: Uneven, plausible language mix for a district hospital serving a mixed
+#: population: mostly English-charted, a large Hindi share, then Telugu and
+#: Tamil. Shares sum to 100 and are scaled to the requested cohort size.
+_LANGUAGE_MIX: tuple[tuple[str, int], ...] = (
+    ("en", 48),
+    ("hi", 27),
+    ("te", 14),
+    ("ta", 11),
+)
 
 
 # ---------------------------------------------------------------------------

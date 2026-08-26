@@ -1,0 +1,37 @@
+{
+  "language": "te",
+  "name": "Telugu",
+  "section_titles": {
+    "Current complaint / reason for visit": "ప్రస్తుత ఫిర్యాదు / రాకకు కారణం",
+    "Active problems & chronic conditions": "ప్రస్తుత సమస్యలు & దీర్ఘకాలిక వ్యాధులు",
+    "Allergies": "అలర్జీలు",
+    "Current medications": "ప్రస్తుత మందులు",
+    "Recent labs & trends": "ఇటీవలి పరీక్షలు & ధోరణులు",
+    "Past encounters / procedures": "గత సందర్శనలు / ప్రక్రియలు",
+    "Flags & things to verify": "గమనించవలసినవి / ధృవీకరించవలసినవి"
+  },
+  "phrases": {
+    "Presenting for review of": "సమీక్ష కోసం వచ్చారు:",
+    "confirm at reception before use": "ఉపయోగించే ముందు రిసెప్షన్‌లో నిర్ధారించండి",
+    "double-check source": "మూలాన్ని మళ్లీ సరిచూడండి",
+    "No ingested documents yet for this patient.": "ఈ రోగికి ఇంకా ఎటువంటి పత్రాలు లేవు.",
+    "Low-confidence": "తక్కువ-విశ్వాసం",
+    "Unverified": "ధృవీకరించబడలేదు",
+    "medication": "మందు",
+    "condition": "వ్యాధి",
+    "allergy": "అలర్జీ",
+    "observation": "పరీక్ష",
+    "procedure": "ప్రక్రియ"
+  },
+  "plain_lead": "ఈ సారాంశం కేవలం సమాచారం కోసం మాత్రమే; ఇందులో ఎటువంటి రోగనిర్ధారణ లేదు.",
+  "plain_labels": {
+    "complaint": "రాకకు కారణం",
+    "problems": "ప్రస్తుత సమస్యలు",
+    "allergies": "అలర్జీలు",
+    "medications": "మందులు",
+    "labs": "పరీక్ష ఫలితాలు",
+    "encounters": "గత చరిత్ర",
+    "flags": "ధృవీకరించవలసిన విషయాలు"
+  },
+  "stub_note": "యంత్రం/నిఘంటువు ఆధారిత అనువాదం — పూర్తి అనువాదానికి ఆన్‌లైన్ మోడ్ అవసరం. వైద్య విలువలు మార్చబడలేదు."
+}

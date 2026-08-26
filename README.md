@@ -53,8 +53,10 @@ silently-dropped data.
 - ABHA-style patient ids, with a **mock** ABHA lookup for the demo.
 
 **Language and voice**
-- Snapshot translation into **English / Hindi / Tamil**, with clinical values, doses and citations
-  preserved verbatim — if a number would be lost in translation, the original text is kept.
+- Snapshot translation into **English / Hindi / Telugu / Tamil**, with clinical values, doses and citations
+  preserved verbatim — if a number would be lost in translation, the original text is kept. Offline this is
+  glossary-based (section titles and common clinical phrases) for every one of the four; full sentence-level
+  translation needs a real provider.
 - A patient-facing **plain-language** narrative of the same facts.
 - Voice intake, transcribed **on-device** so audio never leaves the premises.
 
@@ -81,7 +83,7 @@ Everything above has a **deterministic offline path**: no API key, no network, s
 ## Tech stack
 
 - **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind, TanStack Query, a small hand-rolled UI kit,
-  bundled EN/HI/TA dictionaries, light + dark theme.
+  bundled EN/HI/TE/TA dictionaries, light + dark theme.
 - **Backend:** Python 3.11 + FastAPI, SQLAlchemy 2.0 + Alembic, Pydantic v2.
 - **Data:** PostgreSQL + `pgvector` — relational data and embeddings in one store.
 - **Storage:** S3-compatible object storage for raw uploads (MinIO locally, R2 / Supabase in cloud).
@@ -143,10 +145,12 @@ Be precise about what is *not* production:
 - **Voice transcription is stubbed** unless `faster-whisper` and a model are installed.
 - **ABHA lookup is a mock**, not NHA/ABDM integration.
 - **FHIR output is schema-plausible R4**, not validator-clean — no ABDM India-profile extensions.
-- **Consent enforcement is implemented and tested but not yet wired** into route dependencies; consent
-  records, revocation and the audit trail are live.
-- **Retrieval is exhaustive** over a patient's clinical items; the pgvector chunk index is written but not
-  yet queried.
+- **Consent enforcement ships in `audit_only` mode.** The gate is wired to the sensitive reads and works,
+  but by default it audits every decision without blocking; set `CONSENT_ENFORCEMENT=enforce` to make it
+  binding.
+- **Semantic ranking needs a real embedding provider.** Retrieval is hybrid — exhaustive over structured
+  clinical items, plus pgvector similarity over narrative chunks — but stub embeddings are deterministic
+  hashes, so offline the plumbing and citations are real while the *ranking* is not meaningful.
 - **Not deployed.** Deploy artifacts and CI exist; there is no live URL yet.
 - **API-only for now:** triage, surveillance, the consult scribe, consent/audit and evaluation have no UI.
 - **Not a medical device, not ABDM-certified**, and all patient data here is synthetic.

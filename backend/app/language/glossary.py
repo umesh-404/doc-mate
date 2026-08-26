@@ -2,7 +2,7 @@
 
 Loads the per-language JSON packs in ``app/language/data/``. These power the
 deterministic, offline stub translation path: fixed section titles and common
-clinical phrase fragments are mapped to Hindi / Tamil, while everything else —
+clinical phrase fragments are mapped to Hindi / Tamil / Telugu, while everything else —
 crucially numbers, doses, units, drug and lab names — passes through UNCHANGED
 (PROJECT.md section 4: never alter a clinical value).
 
@@ -15,7 +15,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-SUPPORTED_LANGS = ("en", "hi", "ta")
+SUPPORTED_LANGS = ("en", "hi", "ta", "te")
 
 _DATA_DIR = Path(__file__).resolve().parent / "data"
 

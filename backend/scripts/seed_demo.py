@@ -10,13 +10,15 @@ What it creates
 ---------------
 * The two demo users (``reception@demo`` / ``doctor@demo``) if missing — the
   same accounts as ``scripts.seed``, so running either first is fine.
-* Five synthetic patients (clearly fake data) spanning EN / HI / TA, each with
-  a distinct clinical picture chosen to showcase a product strength:
+* Six synthetic patients (clearly fake data) spanning EN / HI / TE / TA, each
+  with a distinct clinical picture chosen to showcase a product strength:
     - Rukmini Devi Sharma  — diabetic + hypertensive elder, many records
                              (summarisation power).
     - Arjun Nair           — young patient, acute complaint (fast intake).
     - Meena Kumari         — antenatal patient, Hindi UI (India-scale i18n).
     - Karthik Raman        — documented Penicillin allergy, Tamil UI (safety).
+    - Anasuya Pothineni    — on warfarin, arrives with an outside prescription
+                             for an NSAID, Telugu UI (drug–drug interaction).
     - Lakshmi Bai          — sparse records + one unreadable upload
                              (honest flags / verify).
 * Per patient: several Documents across every doc type with realistic
@@ -615,7 +617,150 @@ PATIENTS: list[dict] = [
         ],
         "extra_flags": [],
     },
-    # -- 5. Sparse records: honest flags / verify -------------------------
+    # -- 5. Drug–drug interaction: medication safety, Telugu UI -----------
+    #
+    # Karthik covers drug–ALLERGY. This patient covers the other half of the
+    # safety pass: a drug–DRUG interaction between two records issued by
+    # different facilities — exactly the collision a doctor reading a thick
+    # paper file is most likely to miss. Both medications are verified,
+    # because app.safety.interactions deliberately ignores unconfirmed
+    # extractions (PROJECT.md section 6c): an unverified pair raises nothing.
+    {
+        "abha_id": "66-7788-9900-1122",
+        "full_name": "Anasuya Pothineni",
+        "age": 62,
+        "sex": "female",
+        "gender": "female",
+        "phone": "+91-90000-60006",
+        "preferred_language": "te",
+        "demographics": {
+            "synthetic": True,
+            "address": "Ward 9, rural referral block (synthetic)",
+            "note": "On long-term anticoagulation (synthetic)",
+        },
+        "complaint": {
+            "text": "Knee and lower-back pain for two weeks; brought a "
+            "prescription from an outside clinic and is here for review of "
+            "her regular medication.",
+            "doc": "outside_rx",
+        },
+        "documents": [
+            {
+                "key": "discharge",
+                "doc_type": DocumentType.discharge_summary,
+                "status": DocumentStatus.verified,
+                "filename": "discharge_cardiology_2026-05-20.pdf",
+                "content_type": "application/pdf",
+                "confidence": 0.96,
+                "size_bytes": 147_663,
+                "extracted_text": (
+                    "DISCHARGE SUMMARY (demo)\n"
+                    "Atrial fibrillation, rate controlled.\n"
+                    "Warfarin 3mg 0-0-1, INR monitored monthly.\n"
+                    "Metoprolol 25mg 1-0-1.\n"
+                    "Discharged stable on oral medication."
+                ),
+                "items": [
+                    {
+                        "kind": ClinicalItemKind.condition,
+                        "label": "Atrial fibrillation",
+                        "days_ago": 98,
+                        "confidence": 0.94,
+                        "verified": True,
+                    },
+                    {
+                        "kind": ClinicalItemKind.medication,
+                        "label": "Warfarin 3mg",
+                        "value": "0-0-1",
+                        "days_ago": 98,
+                        "confidence": 0.95,
+                        "verified": True,
+                    },
+                    {
+                        "kind": ClinicalItemKind.medication,
+                        "label": "Metoprolol 25mg",
+                        "value": "1-0-1",
+                        "days_ago": 98,
+                        "confidence": 0.93,
+                        "verified": True,
+                    },
+                ],
+            },
+            {
+                "key": "inr_lab",
+                "doc_type": DocumentType.lab_report,
+                "status": DocumentStatus.verified,
+                "filename": "labs_coagulation_2026-08-12.pdf",
+                "content_type": "application/pdf",
+                "confidence": 0.97,
+                "size_bytes": 71_408,
+                "extracted_text": (
+                    "LABORATORY REPORT (demo)\nINR 3.4\n"
+                    "Hemoglobin 11.1 g/dL\nPlatelet count 214000 /uL"
+                ),
+                "items": [
+                    {
+                        "kind": ClinicalItemKind.observation,
+                        "label": "INR",
+                        "value": "3.4",
+                        "days_ago": 12,
+                        "confidence": 0.97,
+                        "verified": True,
+                        "trend": "up",
+                    },
+                    {
+                        "kind": ClinicalItemKind.observation,
+                        "label": "Hemoglobin",
+                        "value": "11.1",
+                        "unit": "g/dL",
+                        "days_ago": 12,
+                        "confidence": 0.96,
+                        "verified": True,
+                        "trend": "down",
+                    },
+                ],
+            },
+            {
+                "key": "outside_rx",
+                "doc_type": DocumentType.prescription,
+                "status": DocumentStatus.verified,  # confirmed at reception
+                "filename": "outside_clinic_rx_photo_2026-08-18.jpg",
+                "content_type": "image/jpeg",
+                "confidence": 0.86,
+                "size_bytes": 221_775,
+                "extracted_text": (
+                    "PRESCRIPTION (demo)\nDiclofenac 50mg 1-0-1 x5 days for "
+                    "joint pain\nPantoprazole 40mg 1-0-0\n"
+                    "(issued at an outside clinic; anticoagulant not listed)."
+                ),
+                "items": [
+                    {
+                        "kind": ClinicalItemKind.medication,
+                        "label": "Diclofenac 50mg",
+                        "value": "1-0-1",
+                        "days_ago": 6,
+                        "confidence": 0.84,  # < 0.85 -> verify flag
+                        "verified": True,
+                    },
+                    {
+                        "kind": ClinicalItemKind.medication,
+                        "label": "Pantoprazole 40mg",
+                        "value": "1-0-0",
+                        "days_ago": 6,
+                        "confidence": 0.88,
+                        "verified": True,
+                    },
+                ],
+            },
+        ],
+        "extra_flags": [
+            "The outside prescription and the discharge medication list come "
+            "from different facilities — confirm with the patient what she is "
+            "actually taking today.",
+            "No INR reading on file since the outside prescription was issued.",
+        ],
+    },
+    # -- 6. Sparse records: honest flags / verify -------------------------
     {
         "abha_id": "55-6677-8899-0011",
         "full_name": "Lakshmi Bai",

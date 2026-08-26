@@ -8,8 +8,8 @@ still stating no diagnosis. Offline-by-default (glossary/template stubs); real
 mode is routed through ``app.llm``.
 
 Contract v2:
-  GET /patients/{id}/summary/translated?lang=en|hi|ta -> SummaryRead (translated)
-  GET /patients/{id}/summary/plain?lang=en|hi|ta      -> {language, text}
+  GET /patients/{id}/summary/translated?lang=en|hi|ta|te -> SummaryRead (translated)
+  GET /patients/{id}/summary/plain?lang=en|hi|ta|te      -> {language, text}
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from app.schemas.summary import Section, SummaryItem, SummaryRead
 
 router = APIRouter(prefix="/patients", tags=["language"])
 
-Lang = Literal["en", "hi", "ta"]
+Lang = Literal["en", "hi", "ta", "te"]
 
 
 def _load_sections(db: Session, patient_id: uuid.UUID) -> list[dict]:

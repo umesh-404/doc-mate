@@ -23,7 +23,7 @@ import type {
 } from "./types";
 
 /** Languages Doc-mate can translate the snapshot into. */
-export type SummaryLang = "en" | "hi" | "ta";
+export type SummaryLang = "en" | "hi" | "ta" | "te";
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";

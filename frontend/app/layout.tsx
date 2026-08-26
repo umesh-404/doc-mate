@@ -1,14 +1,47 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import {
+  Inter,
+  Noto_Sans_Devanagari,
+  Noto_Sans_Tamil,
+  Noto_Sans_Telugu,
+} from "next/font/google";
 import { Providers } from "@/lib/providers";
 import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-latin",
   display: "swap",
 });
+
+// Indic faces are loaded explicitly rather than left to per-glyph browser
+// fallback: Hindi, Tamil and Telugu are first-class UI languages, and on a
+// clinic terminal without a good system Indic font the text would otherwise
+// render in whatever the browser could find. Each is subset to its own script
+// so the extra weight only ships to the glyphs that need it.
+const devanagari = Noto_Sans_Devanagari({
+  subsets: ["devanagari"],
+  variable: "--font-devanagari",
+  display: "swap",
+});
+const tamil = Noto_Sans_Tamil({
+  subsets: ["tamil"],
+  variable: "--font-tamil",
+  display: "swap",
+});
+const telugu = Noto_Sans_Telugu({
+  subsets: ["telugu"],
+  variable: "--font-telugu",
+  display: "swap",
+});
+
+const fontVariables = [
+  inter.variable,
+  devanagari.variable,
+  tamil.variable,
+  telugu.variable,
+].join(" ");
 
 export const metadata: Metadata = {
   title: "Doc-mate — Patient-context engine",
@@ -50,7 +83,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={fontVariables} suppressHydrationWarning>
       <head>
         {/*
           Paints the stored/system theme before first paint so there is no
