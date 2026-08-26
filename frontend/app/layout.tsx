@@ -14,6 +14,24 @@ export const metadata: Metadata = {
   title: "Doc-mate — Patient-context engine",
   description:
     "AI-assisted patient-context engine for high-volume clinics. Summarises and cites — never diagnoses.",
+  applicationName: "Doc-mate",
+  // Installable PWA: clinics on intermittent links run this from the home
+  // screen and keep working through an outage (PROJECT.md §12.8).
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Doc-mate",
+    statusBarStyle: "default",
+  },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {

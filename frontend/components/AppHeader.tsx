@@ -3,17 +3,33 @@
 import { Activity, LogOut } from "lucide-react";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { SyncIndicator } from "@/components/offline/SyncIndicator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { fill } from "@/lib/offline/format";
+import { useOffline } from "@/lib/offline/provider";
 
 /** Top navigation bar shared across authenticated screens. */
 export function AppHeader({ actions }: { actions?: React.ReactNode }) {
   const { user, role, logout } = useAuth();
   const { t } = useI18n();
+  const { pendingCount, attentionCount } = useOffline();
   const home = role === "doctor" ? "/doctor/patients" : "/reception/patients";
+
+  /**
+   * Signing out wipes local PHI, queued writes included. If anything has not
+   * reached the server yet, say so before destroying it — never silently.
+   */
+  function onSignOut() {
+    const unsent = pendingCount + attentionCount;
+    if (unsent > 0 && !window.confirm(fill(t.offline.signOutPending, unsent))) {
+      return;
+    }
+    void logout();
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface/85 backdrop-blur-md supports-[backdrop-filter]:bg-surface/70 print:hidden">
@@ -37,6 +53,7 @@ export function AppHeader({ actions }: { actions?: React.ReactNode }) {
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
           {actions}
+          <SyncIndicator />
           <ThemeToggle />
           <LanguageSwitcher />
           {user && (
@@ -50,7 +67,7 @@ export function AppHeader({ actions }: { actions?: React.ReactNode }) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={logout}
+            onClick={onSignOut}
             aria-label={t.common.signOut}
           >
             <LogOut className="h-4 w-4" aria-hidden />

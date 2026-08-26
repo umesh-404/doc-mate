@@ -1,8 +1,10 @@
 "use client";
 
-import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, CloudOff, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
+import { CacheNotice } from "@/components/offline/CacheNotice";
+import { OfflineUnavailable } from "@/components/offline/OfflineUnavailable";
 import { RequireRole } from "@/components/RequireRole";
 import { ShortcutsHelp, ShortcutsHint } from "@/components/ShortcutsHelp";
 import { PatientSnapshotView } from "@/components/snapshot/PatientSnapshotView";
@@ -19,9 +21,11 @@ import { ErrorState } from "@/components/ui/States";
 import { api, ApiError, type SummaryLang } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { getMockSnapshot } from "@/lib/mock-data";
+import { useOffline } from "@/lib/offline/provider";
 import { useShortcuts } from "@/lib/shortcuts";
 import { useTheme } from "@/lib/theme";
 import {
+  qk,
   useGenerateSummary,
   useInteractions,
   usePatient,
@@ -44,6 +48,7 @@ export default function PatientSnapshotPage({
 }) {
   const { t } = useI18n();
   const { cycleTheme } = useTheme();
+  const { online } = useOffline();
   const patientId = params.id;
 
   const [polling, setPolling] = useState(false);
@@ -181,7 +186,13 @@ export default function PatientSnapshotPage({
   );
 
   function renderBody() {
-    if (patient.isError) {
+    // A previously-opened patient stays readable during an outage; one that has
+    // never been opened on this device has nothing to show, and says so.
+    if (!online && !patient.data && !displaySummary) {
+      return <OfflineUnavailable />;
+    }
+
+    if (patient.isError && !patient.data) {
       return (
         <ErrorState
           title={t.patients.loadError}
@@ -192,7 +203,9 @@ export default function PatientSnapshotPage({
       );
     }
 
-    if (summary.isError) {
+    // With a cached snapshot on screen, a failed refresh is a staleness notice,
+    // not an error page — the CacheNotice below labels how old the copy is.
+    if (summary.isError && !displaySummary) {
       return (
         <ErrorState
           title={t.snapshot.loadError}
@@ -203,7 +216,7 @@ export default function PatientSnapshotPage({
       );
     }
 
-    if (patient.isLoading || summary.isLoading) {
+    if ((patient.isLoading && !patient.data) || (summary.isLoading && !displaySummary)) {
       return <SnapshotSkeleton label={t.states.loading} />;
     }
 
@@ -211,6 +224,10 @@ export default function PatientSnapshotPage({
     if (displaySummary && patient.data) {
       return (
         <div className="flex flex-col gap-4">
+          <CacheNotice
+            queryKey={qk.summary(patientId)}
+            stale={summary.isError && !!displaySummary}
+          />
           <SnapshotToolbar
             lang={activeLang}
             onLang={setViewLang}
@@ -284,14 +301,28 @@ export default function PatientSnapshotPage({
                 {t.snapshot.generateBody}
               </p>
             </div>
-            <Button size="lg" onClick={onGenerate} disabled={generate.isPending}>
+            {/* Generation is a server-side RAG run — it cannot be queued and
+                replayed like an upload, so offline it is plainly unavailable
+                rather than a button that silently does nothing. */}
+            <Button
+              size="lg"
+              onClick={onGenerate}
+              disabled={generate.isPending || !online}
+            >
               {generate.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : !online ? (
+                <CloudOff className="h-4 w-4" aria-hidden />
               ) : (
                 <Sparkles className="h-4 w-4" aria-hidden />
               )}
               {t.snapshot.generateAction}
             </Button>
+            {!online && (
+              <p role="note" className="text-xs font-medium text-warning">
+                {t.offline.offlineBanner}
+              </p>
+            )}
             {generate.isError && (
               <p role="alert" className="text-sm font-medium text-danger">
                 {t.common.error}

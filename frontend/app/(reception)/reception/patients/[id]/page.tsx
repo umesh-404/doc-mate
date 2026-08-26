@@ -3,12 +3,15 @@
 import {
   AlertTriangle,
   ArrowLeft,
+  CloudOff,
   FileStack,
   Loader2,
   Stethoscope,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { CacheNotice } from "@/components/offline/CacheNotice";
+import { OfflineUnavailable } from "@/components/offline/OfflineUnavailable";
 import { DocumentVerifyCard } from "@/components/reception/DocumentVerifyCard";
 import { RequireRole } from "@/components/RequireRole";
 import { UploadDropzone } from "@/components/UploadDropzone";
@@ -19,7 +22,9 @@ import { SelectField } from "@/components/ui/Input";
 import { Skeleton, SkeletonDocList } from "@/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { useI18n } from "@/lib/i18n";
-import { useDocuments, usePatient, useUploadDocument } from "@/lib/queries";
+import type { UploadDocumentPayload } from "@/lib/offline/outbox";
+import { useOffline, usePendingFor } from "@/lib/offline/provider";
+import { qk, useDocuments, usePatient, useUploadDocument } from "@/lib/queries";
 import { DOC_TYPES } from "@/lib/types";
 
 export default function ReceptionPatientPage({
@@ -33,6 +38,8 @@ export default function ReceptionPatientPage({
   const patient = usePatient(patientId);
   const documents = useDocuments(patientId);
   const upload = useUploadDocument(patientId);
+  const { online } = useOffline();
+  const { documents: queuedDocs } = usePendingFor(patientId);
 
   const [docType, setDocType] = useState<string>(DOC_TYPES[0]!.value);
 
@@ -63,7 +70,15 @@ export default function ReceptionPatientPage({
       </div>
 
       {/* Patient identity */}
-      {patient.isLoading ? (
+      <CacheNotice
+        className="mb-3"
+        queryKey={qk.patient(patientId)}
+        stale={patient.isError && !!patient.data}
+      />
+
+      {!online && !patient.data ? (
+        <OfflineUnavailable className="mb-5" />
+      ) : patient.isLoading && !patient.data ? (
         <div
           className="mb-5 rounded-lg border border-border bg-surface p-5 shadow-card"
           role="status"
@@ -73,7 +88,7 @@ export default function ReceptionPatientPage({
           <Skeleton className="h-7 w-56" />
           <Skeleton className="mt-2 h-3.5 w-80 max-w-full" />
         </div>
-      ) : patient.isError ? (
+      ) : patient.isError && !patient.data ? (
         <ErrorState
           className="mb-5"
           title={t.patients.loadError}
@@ -135,6 +150,14 @@ export default function ReceptionPatientPage({
                     {t.docs.uploading}
                   </p>
                 )}
+                {/* Offline uploads succeed locally, not on the server. Say
+                    which one happened (PROJECT.md §4 rule 5). */}
+                {!upload.isPending && upload.data?.queued && (
+                  <p className="flex items-center gap-1.5 text-xs font-medium text-warning">
+                    <CloudOff className="h-3.5 w-3.5" aria-hidden />
+                    {t.offline.savedLocally}
+                  </p>
+                )}
                 {upload.isError && (
                   <p
                     role="alert"
@@ -166,16 +189,60 @@ export default function ReceptionPatientPage({
             )}
           </div>
 
-          {documents.isLoading ? (
+          <CacheNotice
+            className="mb-2.5"
+            queryKey={qk.documents(patientId)}
+            stale={documents.isError && !!documents.data}
+          />
+
+          {/* Files captured offline. They are real bytes held on this device,
+              but the ingestion pipeline has not seen them yet — so they get a
+              queued badge, not a processing status. */}
+          {queuedDocs.length > 0 && (
+            <ul className="mb-3 flex flex-col gap-2">
+              {queuedDocs.map((item) => {
+                const payload = item.payload as UploadDocumentPayload;
+                const attention =
+                  item.state === "failed" || item.state === "conflict";
+                return (
+                  <li
+                    key={item.id}
+                    className={`flex items-center justify-between gap-3 rounded-lg border px-3.5 py-3 ${
+                      attention
+                        ? "border-danger/40 bg-danger-surface/50"
+                        : "border-warning/45 bg-warning-surface/40"
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {payload.filename}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {t.offline.notSyncedYet}
+                      </p>
+                    </div>
+                    <Badge tone={attention ? "danger" : "warning"}>
+                      <CloudOff className="h-3 w-3" aria-hidden />
+                      {attention ? t.offline.attentionTitle : t.offline.queued}
+                    </Badge>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {!online && !documents.data && queuedDocs.length === 0 ? (
+            <OfflineUnavailable />
+          ) : documents.isLoading && !documents.data ? (
             <SkeletonDocList label={t.states.loading} />
-          ) : documents.isError ? (
+          ) : documents.isError && !documents.data ? (
             <ErrorState
               title={t.states.errorTitle}
               body={t.states.errorBody}
               onRetry={() => void documents.refetch()}
               retryLabel={t.common.retry}
             />
-          ) : docs.length === 0 ? (
+          ) : docs.length === 0 && queuedDocs.length === 0 ? (
             <EmptyState
               icon={<FileStack className="h-5 w-5" aria-hidden />}
               title={t.docs.noDocuments}

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Offline — Doc-mate</title>
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8fb" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f151f" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <!--
+      Static fallback shown when a page is requested that has never been cached
+      and the device is offline. It cannot reach the app's dictionary, so the
+      three supported languages are inlined. Deliberately dependency-free.
+    -->
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f8fb;
+        --surface: #ffffff;
+        --border: #dde5ee;
+        --fg: #17222f;
+        --muted: #5d6b7d;
+        --brand: #035c8c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --bg: #0f151f;
+          --surface: #171f2c;
+          --border: #2d3746;
+          --fg: #eef3f8;
+          --muted: #99a5b5;
+          --brand: #4bb6ec;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--fg);
+        font: 400 16px/1.6 "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+          "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+      }
+      .card {
+        width: 100%;
+        max-width: 30rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 32px 28px;
+        text-align: center;
+        box-shadow: 0 1px 2px rgba(23, 34, 47, 0.06);
+      }
+      img { width: 56px; height: 56px; }
+      h1 { margin: 16px 0 8px; font-size: 1.25rem; letter-spacing: -0.01em; }
+      p { margin: 0 0 6px; color: var(--muted); font-size: 0.9rem; }
+      p.alt { font-size: 0.85rem; }
+      button {
+        margin-top: 20px;
+        font: inherit;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #fff;
+        background: var(--brand);
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 20px;
+        cursor: pointer;
+      }
+      .note {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+        font-size: 0.78rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <img src="/icons/icon.svg" alt="" />
+      <h1>You are offline</h1>
+      <p>This screen has not been opened on this device yet, so there is no saved copy to show.</p>
+      <p class="alt" lang="hi">आप ऑफ़लाइन हैं — इस स्क्रीन की कोई सहेजी हुई प्रति नहीं है।</p>
+      <p class="alt" lang="ta">நீங்கள் ஆஃப்லைனில் உள்ளீர்கள் — இந்தத் திரையின் சேமிக்கப்பட்ட நகல் இல்லை.</p>
+      <button type="button" onclick="location.reload()">Try again</button>
+      <p class="note">
+        Nothing has been lost. Patients and records you captured offline stay
+        queued on this device and sync when the connection returns.
+      </p>
+    </main>
+  </body>
+</html>

@@ -91,6 +91,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     const token = getToken();
     if (token) finalHeaders.set("Authorization", `Bearer ${token}`);
   }
+  // Marks writes as already covered by the app-side outbox, so the service
+  // worker lets a failure surface here instead of queueing it a second time.
+  if (rest.method && rest.method.toUpperCase() !== "GET") {
+    finalHeaders.set("X-Docmate-Outbox", "app");
+  }
 
   let res: Response;
   try {

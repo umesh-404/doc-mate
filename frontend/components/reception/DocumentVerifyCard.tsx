@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
+  CloudOff,
   FileText,
   Loader2,
 } from "lucide-react";
@@ -72,16 +73,25 @@ export function DocumentVerifyCard({
   }
 
   function verifyAll() {
-    verify.mutate({ documentId: document.id });
+    verify.mutate({ documentId: document.id, label: document.filename });
     setSelected(new Set());
   }
 
   function verifySelected() {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    verify.mutate({ documentId: document.id, itemIds: ids });
+    verify.mutate({
+      documentId: document.id,
+      itemIds: ids,
+      label: document.filename,
+    });
     setSelected(new Set());
   }
+
+  // Offline, a verification is queued rather than applied. The items on screen
+  // still read as unverified — which is the truth until the server says
+  // otherwise (PROJECT.md §4 rule 5).
+  const verifyQueued = verify.data?.queued === true;
 
   const selectableIds = unverified.map((i) => i.id);
   const allSelected =
@@ -238,6 +248,12 @@ export function DocumentVerifyCard({
                     {t.docs.verifySelected}
                     {selected.size > 0 ? ` (${selected.size})` : ""}
                   </Button>
+                  {verifyQueued && (
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-warning">
+                      <CloudOff className="h-3.5 w-3.5" aria-hidden />
+                      {t.offline.queued}
+                    </span>
+                  )}
                   {verify.isError && (
                     <span role="alert" className="text-xs font-medium text-danger">
                       {t.common.error}

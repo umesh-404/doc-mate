@@ -17,6 +17,12 @@ import {
 } from "@tanstack/react-query";
 import { ApiError, api, type SummaryLang } from "./api";
 import {
+  enqueueCreatePatient,
+  enqueueUploadDocument,
+  enqueueVerifyDocument,
+  requestBackgroundSync,
+} from "./offline/outbox";
+import {
   IN_FLIGHT_STATUSES,
   type ClinicalItem,
   type DocumentDetail,
@@ -30,6 +36,45 @@ import {
 } from "./types";
 
 const POLL_MS = 2000;
+
+/* ------------------------------------------------------------------ */
+/* Offline write handling                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Result shape shared by every write that can be queued. `queued: true` means
+ * the write is safely on this device but the server has NOT seen it — the UI
+ * must say so rather than showing success (PROJECT.md §4 rule 5).
+ */
+export type WriteResult<T> =
+  | { queued: false; data: T }
+  | { queued: true; id: string; label?: string };
+
+/** True when the failure means "could not reach the server", not "refused". */
+function isOfflineFailure(err: unknown): boolean {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
+  // ApiError(0) is what lib/api.ts raises when fetch itself threw.
+  return err instanceof ApiError && err.status === 0;
+}
+
+/**
+ * Try the write; on a connectivity failure hand it to the outbox instead of
+ * losing it. A refusal from the server (4xx/5xx) is a real error and is
+ * re-thrown so the form can show it.
+ */
+async function writeOrQueue<T>(
+  send: () => Promise<T>,
+  queue: () => Promise<{ id: string; label?: string }>,
+): Promise<WriteResult<T>> {
+  try {
+    return { queued: false, data: await send() };
+  } catch (err) {
+    if (!isOfflineFailure(err)) throw err;
+    const record = await queue();
+    void requestBackgroundSync();
+    return { queued: true, id: record.id, label: record.label };
+  }
+}
 
 export const qk = {
   patients: ["patients"] as const,
@@ -59,13 +104,23 @@ export function usePatient(id: string): UseQueryResult<Patient, ApiError> {
   });
 }
 
+/**
+ * Create a patient. Offline, the registration is queued instead of failing —
+ * the front desk keeps working through an outage — and the caller is told
+ * `queued: true` so it can label the record honestly.
+ */
 export function useCreatePatient() {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: NewPatient) => api.createPatient(body),
-    onSuccess: (patient) => {
+  return useMutation<WriteResult<Patient>, ApiError, NewPatient>({
+    mutationFn: (body) =>
+      writeOrQueue(
+        () => api.createPatient(body),
+        () => enqueueCreatePatient(body),
+      ),
+    onSuccess: (result) => {
+      if (result.queued) return; // nothing on the server to invalidate yet
       qc.invalidateQueries({ queryKey: qk.patients });
-      qc.setQueryData(qk.patient(patient.id), patient);
+      qc.setQueryData(qk.patient(result.data.id), result.data);
     },
   });
 }
@@ -114,12 +169,29 @@ export function useDocument(
   });
 }
 
+/**
+ * Upload a document. Offline, the file itself is kept in IndexedDB and replayed
+ * later, so a photographed prescription captured during an outage is not lost.
+ */
 export function useUploadDocument(patientId: string) {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { file: File; docType?: string }) =>
-      api.uploadDocument({ patientId, file: input.file, docType: input.docType }),
-    onSuccess: () => {
+  return useMutation<
+    WriteResult<DocumentSummary>,
+    ApiError,
+    { file: File; docType?: string }
+  >({
+    mutationFn: (input) =>
+      writeOrQueue(
+        () =>
+          api.uploadDocument({
+            patientId,
+            file: input.file,
+            docType: input.docType,
+          }),
+        () => enqueueUploadDocument({ patientId, ...input }),
+      ),
+    onSuccess: (result) => {
+      if (result.queued) return;
       qc.invalidateQueries({ queryKey: qk.documents(patientId) });
     },
   });
@@ -127,11 +199,19 @@ export function useUploadDocument(patientId: string) {
 
 export function useVerifyDocument(patientId: string) {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { documentId: string; itemIds?: ClinicalItem["id"][] }) =>
-      api.verifyDocument(input.documentId, input.itemIds),
-    onSuccess: (detail) => {
-      qc.setQueryData(qk.document(detail.id), detail);
+  return useMutation<
+    WriteResult<DocumentDetail>,
+    ApiError,
+    { documentId: string; itemIds?: ClinicalItem["id"][]; label?: string }
+  >({
+    mutationFn: (input) =>
+      writeOrQueue(
+        () => api.verifyDocument(input.documentId, input.itemIds),
+        () => enqueueVerifyDocument(input),
+      ),
+    onSuccess: (result) => {
+      if (result.queued) return;
+      qc.setQueryData(qk.document(result.data.id), result.data);
       qc.invalidateQueries({ queryKey: qk.documents(patientId) });
     },
   });

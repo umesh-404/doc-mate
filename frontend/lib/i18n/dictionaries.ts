@@ -214,6 +214,47 @@ export type Dictionary = {
     dark: string;
     system: string;
   };
+  /**
+   * Offline-first PWA. Templates containing `{n}` are filled by
+   * lib/offline/format.ts — keep the placeholder in every translation.
+   */
+  offline: {
+    offline: string;
+    online: string;
+    offlineBanner: string;
+    cachedCopy: string;
+    syncedPrefix: string;
+    neverSynced: string;
+    justNow: string;
+    minutesAgo: string;
+    hoursAgo: string;
+    daysAgo: string;
+    pendingCount: string;
+    syncNow: string;
+    syncing: string;
+    queueTitle: string;
+    queueEmpty: string;
+    queued: string;
+    queuedShort: string;
+    attentionTitle: string;
+    failedAfterRetries: string;
+    rejected: string;
+    interrupted: string;
+    retry: string;
+    discard: string;
+    discardConfirm: string;
+    itemPatient: string;
+    itemDocument: string;
+    itemVerify: string;
+    itemRaw: string;
+    attemptsLabel: string;
+    notSyncedYet: string;
+    unavailableTitle: string;
+    unavailableBody: string;
+    signOutPending: string;
+    savedLocally: string;
+    openQueue: string;
+  };
   /** Keyboard shortcuts overlay. */
   shortcuts: {
     title: string;
@@ -428,6 +469,47 @@ const en: Dictionary = {
     dark: "Dark",
     system: "System",
   },
+  offline: {
+    offline: "Offline",
+    online: "Online",
+    offlineBanner:
+      "You are offline. Records are read from this device, and anything you add is queued until the connection returns.",
+    cachedCopy: "Offline copy",
+    syncedPrefix: "synced",
+    neverSynced: "never synced",
+    justNow: "just now",
+    minutesAgo: "{n} min ago",
+    hoursAgo: "{n} h ago",
+    daysAgo: "{n} d ago",
+    pendingCount: "{n} waiting to sync",
+    syncNow: "Sync now",
+    syncing: "Syncing…",
+    queueTitle: "Waiting to sync",
+    queueEmpty: "Everything is synced.",
+    queued: "Queued — will sync",
+    queuedShort: "Queued",
+    attentionTitle: "Needs attention",
+    failedAfterRetries: "Couldn't send after {n} attempts.",
+    rejected: "The server rejected this. It has not been saved.",
+    interrupted:
+      "Interrupted while sending — it may or may not have reached the server. Check before retrying.",
+    retry: "Try again",
+    discard: "Discard",
+    discardConfirm: "Discard this queued item? It will not be sent.",
+    itemPatient: "New patient",
+    itemDocument: "Document upload",
+    itemVerify: "Verification",
+    itemRaw: "Queued request",
+    attemptsLabel: "attempt {n}",
+    notSyncedYet: "Not synced yet",
+    unavailableTitle: "Not available offline",
+    unavailableBody:
+      "This hasn't been opened on this device yet, so there is no saved copy to show.",
+    signOutPending:
+      "{n} queued item(s) have not synced. Signing out erases them from this device.",
+    savedLocally: "Saved on this device — not sent yet.",
+    openQueue: "Show sync queue",
+  },
   shortcuts: {
     title: "Keyboard shortcuts",
     hint: "Shortcuts",
@@ -641,6 +723,47 @@ const hi: Dictionary = {
     dark: "गहरा",
     system: "सिस्टम",
   },
+  offline: {
+    offline: "ऑफ़लाइन",
+    online: "ऑनलाइन",
+    offlineBanner:
+      "आप ऑफ़लाइन हैं। रिकॉर्ड इसी डिवाइस से पढ़े जा रहे हैं, और आपकी नई प्रविष्टियाँ कनेक्शन लौटने तक कतार में रहेंगी।",
+    cachedCopy: "ऑफ़लाइन प्रति",
+    syncedPrefix: "सिंक",
+    neverSynced: "कभी सिंक नहीं हुआ",
+    justNow: "अभी-अभी",
+    minutesAgo: "{n} मिनट पहले",
+    hoursAgo: "{n} घंटे पहले",
+    daysAgo: "{n} दिन पहले",
+    pendingCount: "{n} सिंक होने बाकी",
+    syncNow: "अभी सिंक करें",
+    syncing: "सिंक हो रहा है…",
+    queueTitle: "सिंक की प्रतीक्षा में",
+    queueEmpty: "सब कुछ सिंक हो चुका है।",
+    queued: "कतार में — सिंक होगा",
+    queuedShort: "कतार में",
+    attentionTitle: "ध्यान चाहिए",
+    failedAfterRetries: "{n} प्रयासों के बाद भी नहीं भेजा जा सका।",
+    rejected: "सर्वर ने इसे अस्वीकार कर दिया। यह सहेजा नहीं गया है।",
+    interrupted:
+      "भेजते समय बाधित — यह सर्वर तक पहुँचा भी हो सकता है और नहीं भी। दोबारा भेजने से पहले जाँचें।",
+    retry: "पुनः प्रयास करें",
+    discard: "हटाएँ",
+    discardConfirm: "इस कतारबद्ध प्रविष्टि को हटाएँ? यह नहीं भेजी जाएगी।",
+    itemPatient: "नया मरीज़",
+    itemDocument: "दस्तावेज़ अपलोड",
+    itemVerify: "सत्यापन",
+    itemRaw: "कतारबद्ध अनुरोध",
+    attemptsLabel: "प्रयास {n}",
+    notSyncedYet: "अभी सिंक नहीं हुआ",
+    unavailableTitle: "ऑफ़लाइन उपलब्ध नहीं",
+    unavailableBody:
+      "यह इस डिवाइस पर अभी तक नहीं खोला गया, इसलिए दिखाने के लिए कोई सहेजी प्रति नहीं है।",
+    signOutPending:
+      "{n} कतारबद्ध प्रविष्टियाँ सिंक नहीं हुई हैं। साइन आउट करने पर वे इस डिवाइस से मिट जाएँगी।",
+    savedLocally: "इस डिवाइस पर सहेजा गया — अभी भेजा नहीं गया।",
+    openQueue: "सिंक कतार देखें",
+  },
   shortcuts: {
     title: "कीबोर्ड शॉर्टकट",
     hint: "शॉर्टकट",
@@ -853,6 +976,47 @@ const ta: Dictionary = {
     light: "வெளிர்",
     dark: "இருள்",
     system: "கணினி",
+  },
+  offline: {
+    offline: "ஆஃப்லைன்",
+    online: "ஆன்லைன்",
+    offlineBanner:
+      "நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். பதிவுகள் இந்தச் சாதனத்திலிருந்து காட்டப்படுகின்றன; நீங்கள் சேர்ப்பவை இணைப்பு திரும்பும் வரை வரிசையில் காத்திருக்கும்.",
+    cachedCopy: "ஆஃப்லைன் நகல்",
+    syncedPrefix: "ஒத்திசைவு",
+    neverSynced: "ஒருபோதும் ஒத்திசைக்கப்படவில்லை",
+    justNow: "இப்போதுதான்",
+    minutesAgo: "{n} நிமிடங்களுக்கு முன்",
+    hoursAgo: "{n} மணி நேரத்திற்கு முன்",
+    daysAgo: "{n} நாட்களுக்கு முன்",
+    pendingCount: "{n} ஒத்திசைக்கக் காத்திருக்கிறது",
+    syncNow: "இப்போது ஒத்திசை",
+    syncing: "ஒத்திசைக்கிறது…",
+    queueTitle: "ஒத்திசைவுக்குக் காத்திருப்பவை",
+    queueEmpty: "அனைத்தும் ஒத்திசைக்கப்பட்டுவிட்டன.",
+    queued: "வரிசையில் — ஒத்திசைக்கப்படும்",
+    queuedShort: "வரிசையில்",
+    attentionTitle: "கவனம் தேவை",
+    failedAfterRetries: "{n} முயற்சிகளுக்குப் பிறகும் அனுப்ப முடியவில்லை.",
+    rejected: "சேவையகம் இதை நிராகரித்தது. இது சேமிக்கப்படவில்லை.",
+    interrupted:
+      "அனுப்பும்போது தடைபட்டது — சேவையகத்தை அடைந்திருக்கலாம், அடையாமலும் இருக்கலாம். மீண்டும் முயல்வதற்கு முன் சரிபார்க்கவும்.",
+    retry: "மீண்டும் முயற்சி",
+    discard: "நீக்கு",
+    discardConfirm: "இந்த வரிசைப் பதிவை நீக்கவா? இது அனுப்பப்படாது.",
+    itemPatient: "புதிய நோயாளர்",
+    itemDocument: "ஆவணப் பதிவேற்றம்",
+    itemVerify: "சரிபார்ப்பு",
+    itemRaw: "வரிசையில் உள்ள கோரிக்கை",
+    attemptsLabel: "முயற்சி {n}",
+    notSyncedYet: "இன்னும் ஒத்திசைக்கப்படவில்லை",
+    unavailableTitle: "ஆஃப்லைனில் கிடைக்கவில்லை",
+    unavailableBody:
+      "இது இந்தச் சாதனத்தில் இதுவரை திறக்கப்படவில்லை, எனவே காட்ட சேமித்த நகல் இல்லை.",
+    signOutPending:
+      "{n} வரிசைப் பதிவுகள் ஒத்திசைக்கப்படவில்லை. வெளியேறினால் அவை இந்தச் சாதனத்திலிருந்து அழிக்கப்படும்.",
+    savedLocally: "இந்தச் சாதனத்தில் சேமிக்கப்பட்டது — இன்னும் அனுப்பப்படவில்லை.",
+    openQueue: "ஒத்திசைவு வரிசையைக் காட்டு",
   },
   shortcuts: {
     title: "விசைப்பலகை குறுக்குவழிகள்",

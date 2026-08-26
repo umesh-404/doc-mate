@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Doc-mate">
+  <rect width="512" height="512" rx="112" fill="#035c8c" />
+  <rect x="168" y="116" width="176" height="280" rx="22" fill="#ffffff" />
+  <g stroke-linecap="round" fill="none" stroke-width="18">
+    <path d="M196 158H316" stroke="#b0d0e3" />
+    <path d="M196 198H288" stroke="#b0d0e3" />
+    <path d="M186 300h30l22-48 24 98 22-50h42" stroke="#0c8eca" stroke-linejoin="round" />
+  </g>
+</svg>

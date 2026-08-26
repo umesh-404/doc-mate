@@ -1,13 +1,18 @@
 "use client";
 
-import { ChevronRight, Search, Users, X } from "lucide-react";
+import { ChevronRight, CloudOff, Search, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
+import { CacheNotice } from "@/components/offline/CacheNotice";
+import { OfflineUnavailable } from "@/components/offline/OfflineUnavailable";
 import { EmptyState, ErrorState } from "@/components/ui/States";
+import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { useI18n } from "@/lib/i18n";
-import { usePatients } from "@/lib/queries";
+import type { CreatePatientPayload } from "@/lib/offline/outbox";
+import { useOffline, usePendingFor } from "@/lib/offline/provider";
+import { qk, usePatients } from "@/lib/queries";
 import { useShortcuts } from "@/lib/shortcuts";
 import type { Patient } from "@/lib/types";
 
@@ -24,6 +29,10 @@ export function PatientList({ basePath }: { basePath: string }) {
   const [q, setQ] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const { data, isLoading, isError, refetch } = usePatients();
+  const { online } = useOffline();
+  // Registrations captured during an outage. Kept separate from `data`, which
+  // means "what the server has" — they are shown as queued, never as saved.
+  const { patients: queued } = usePendingFor(null);
 
   // `/` jumps to search — the fastest way to find a patient mid-consult.
   useShortcuts({
@@ -42,8 +51,13 @@ export function PatientList({ basePath }: { basePath: string }) {
     );
   }, [data, q]);
 
-  if (isLoading) return <SkeletonTable label={t.states.loading} />;
-  if (isError) {
+  // Offline with nothing cached: say so, rather than spinning forever on a
+  // request the browser has paused (PROJECT.md §4 rule 5).
+  if (!online && !data && queued.length === 0) return <OfflineUnavailable />;
+  if (isLoading && !data) return <SkeletonTable label={t.states.loading} />;
+  // A failed refresh while a cached copy is on screen is not an error state —
+  // the copy is shown, clearly labelled, by the CacheNotice below.
+  if (isError && !data) {
     return (
       <ErrorState
         title={t.patients.loadError}
@@ -54,7 +68,7 @@ export function PatientList({ basePath }: { basePath: string }) {
     );
   }
 
-  if ((data ?? []).length === 0) {
+  if ((data ?? []).length === 0 && queued.length === 0) {
     return (
       <EmptyState
         icon={<Users className="h-5 w-5" aria-hidden />}
@@ -66,6 +80,7 @@ export function PatientList({ basePath }: { basePath: string }) {
 
   return (
     <div className="flex animate-fade-in flex-col gap-4">
+      <CacheNotice queryKey={qk.patients} stale={isError} />
       <div className="flex max-w-md items-center gap-2">
         <div className="relative flex-1">
           <Input
@@ -136,10 +151,22 @@ export function PatientList({ basePath }: { basePath: string }) {
               </tr>
             </thead>
             <tbody>
+              {/* Queued registrations sit at the top: they are the most recent
+                  thing the front desk did, and they need a visible status. */}
+              {queued.map((item) => (
+                <QueuedPatientRow
+                  key={item.id}
+                  name={
+                    (item.payload as CreatePatientPayload).body.full_name ||
+                    (item.label ?? "—")
+                  }
+                  attention={item.state === "failed" || item.state === "conflict"}
+                />
+              ))}
               {filtered.map((p) => (
                 <PatientRow key={p.id} patient={p} basePath={basePath} />
               ))}
-              {filtered.length === 0 && (
+              {filtered.length === 0 && queued.length === 0 && (
                 <tr>
                   <td
                     colSpan={5}
@@ -154,6 +181,40 @@ export function PatientList({ basePath }: { basePath: string }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * A registration that exists only on this device. Deliberately not a link —
+ * there is no server record to open — and deliberately not styled like a saved
+ * row, so it cannot be mistaken for one.
+ */
+function QueuedPatientRow({
+  name,
+  attention,
+}: {
+  name: string;
+  attention: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <tr className="border-t border-border bg-warning-surface/40">
+      <td className="px-4 py-3">
+        <span className="font-semibold text-foreground">{name}</span>
+        <span className="block text-xs text-muted">
+          {t.offline.notSyncedYet}
+        </span>
+      </td>
+      <td className="hidden px-4 py-3 text-xs text-muted sm:table-cell">—</td>
+      <td className="hidden px-4 py-3 text-muted md:table-cell">—</td>
+      <td className="hidden px-4 py-3 text-muted md:table-cell">—</td>
+      <td className="px-4 py-3 text-right">
+        <Badge tone={attention ? "danger" : "warning"}>
+          <CloudOff className="h-3 w-3" aria-hidden />
+          {attention ? t.offline.attentionTitle : t.offline.queued}
+        </Badge>
+      </td>
+    </tr>
   );
 }
 

@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeft, BadgeCheck, Loader2, Search, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  CloudOff,
+  Loader2,
+  Search,
+  UserPlus,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13,6 +20,7 @@ import { Input, SelectField, Textarea } from "@/components/ui/Input";
 import { api, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { localeNames, locales } from "@/lib/i18n/dictionaries";
+import { useOffline } from "@/lib/offline/provider";
 import { useCreatePatient } from "@/lib/queries";
 import type { NewPatient, Sex } from "@/lib/types";
 
@@ -27,6 +35,7 @@ export default function NewPatientPage() {
   const { t } = useI18n();
   const router = useRouter();
   const createPatient = useCreatePatient();
+  const { online } = useOffline();
   const [error, setError] = useState<string | null>(null);
 
   // Controlled fields so ABHA lookup + voice intake can prefill them.
@@ -98,8 +107,15 @@ export default function NewPatientPage() {
     if (note.trim()) body.note = note.trim();
 
     createPatient.mutate(body, {
-      onSuccess: (patient) => {
-        router.push(`/reception/patients/${patient.id}`);
+      onSuccess: (result) => {
+        if (result.queued) {
+          // Offline: the registration is safe on this device but the server has
+          // not issued an id, so there is no patient page to open yet. Return to
+          // the list, where it shows as queued until it syncs.
+          router.push("/reception/patients");
+          return;
+        }
+        router.push(`/reception/patients/${result.data.id}`);
       },
       onError: (err) => {
         setError(
@@ -317,6 +333,18 @@ export default function NewPatientPage() {
               <p className="text-xs leading-relaxed text-muted text-pretty">
                 {t.newPatient.verifyNote}
               </p>
+
+              {/* Say up front what will happen to this registration offline,
+                  so "Create patient" never implies it reached the server. */}
+              {!online && (
+                <p
+                  role="note"
+                  className="flex items-start gap-1.5 rounded-md border border-warning/45 bg-warning-surface px-3 py-2 text-xs font-medium leading-relaxed text-warning"
+                >
+                  <CloudOff className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                  {t.offline.queued} — {t.offline.savedLocally}
+                </p>
+              )}
 
               <div aria-live="polite" className="empty:hidden">
                 {error && (
