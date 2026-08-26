@@ -14,8 +14,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
-from app.db.models import Patient, Summary
+from app.db.models import AuditAction, Patient, Summary
 from app.db.session import get_db, get_sessionmaker
+from app.governance import audited
 from app.rag.summary import build_summary_read, generate_patient_summary
 from app.schemas.summary import SummaryGenerateResponse, SummaryRead
 
@@ -35,7 +36,12 @@ def _run_summary(patient_id: uuid.UUID, language: str | None) -> None:
     "/{patient_id}/summary",
     response_model=SummaryGenerateResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    dependencies=[Depends(get_current_user)],
+    dependencies=[
+        Depends(get_current_user),
+        Depends(
+            audited(AuditAction.generate_summary, resource_type="summary")
+        ),
+    ],
 )
 def create_summary(
     patient_id: uuid.UUID,
@@ -54,7 +60,10 @@ def create_summary(
 @router.get(
     "/{patient_id}/summary",
     response_model=SummaryRead,
-    dependencies=[Depends(get_current_user)],
+    dependencies=[
+        Depends(get_current_user),
+        Depends(audited(AuditAction.view_summary, resource_type="summary")),
+    ],
 )
 def get_summary(
     patient_id: uuid.UUID,

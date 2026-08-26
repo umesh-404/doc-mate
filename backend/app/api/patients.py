@@ -13,8 +13,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user, require_role
-from app.db.models import Patient, UserRole
+from app.db.models import AuditAction, Patient, UserRole
 from app.db.session import get_db
+from app.governance import audited
 from app.schemas.patient import PatientCreate, PatientRead
 
 router = APIRouter(prefix="/patients", tags=["patients"])
@@ -59,7 +60,16 @@ def list_patients(
 @router.get(
     "/{patient_id}",
     response_model=PatientRead,
-    dependencies=[Depends(get_current_user)],
+    dependencies=[
+        Depends(get_current_user),
+        Depends(
+            audited(
+                AuditAction.view_patient,
+                resource_type="patient",
+                resource_param="patient_id",
+            )
+        ),
+    ],
 )
 def get_patient(
     patient_id: uuid.UUID,

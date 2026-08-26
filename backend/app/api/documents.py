@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from app.core.security import get_current_user, require_role
 from app.core.storage import build_storage_key, put_object
 from app.db.models import (
+    AuditAction,
     ClinicalItem,
     Document,
     DocumentStatus,
@@ -35,6 +36,7 @@ from app.db.models import (
     UserRole,
 )
 from app.db.session import get_db
+from app.governance import audited
 from app.schemas.document import (
     ClinicalItemRead,
     DocumentDetail,
@@ -142,7 +144,16 @@ def list_documents(
 @router.get(
     "/{document_id}",
     response_model=DocumentDetail,
-    dependencies=[Depends(get_current_user)],
+    dependencies=[
+        Depends(get_current_user),
+        Depends(
+            audited(
+                AuditAction.view_document,
+                resource_type="document",
+                resource_param="document_id",
+            )
+        ),
+    ],
 )
 def get_document(
     document_id: uuid.UUID,
@@ -159,7 +170,16 @@ def get_document(
 @router.post(
     "/{document_id}/verify",
     response_model=DocumentDetail,
-    dependencies=[Depends(require_role(UserRole.reception))],
+    dependencies=[
+        Depends(require_role(UserRole.reception)),
+        Depends(
+            audited(
+                AuditAction.verify_items,
+                resource_type="document",
+                resource_param="document_id",
+            )
+        ),
+    ],
 )
 def verify_document(
     document_id: uuid.UUID,

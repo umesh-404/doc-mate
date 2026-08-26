@@ -309,3 +309,185 @@ class Summary(TimestampMixin, Base):
     )
 
     encounter: Mapped["Encounter"] = relationship(back_populates="summaries")
+
+
+# ---------------------------------------------------------------------------
+# Governance: consent + access audit (DPDP Act 2023 alignment)
+# ---------------------------------------------------------------------------
+class ConsentScope(str, enum.Enum):
+    full_record = "full_record"
+    summary_only = "summary_only"
+    documents_only = "documents_only"
+
+
+class ConsentStatus(str, enum.Enum):
+    granted = "granted"
+    revoked = "revoked"
+    expired = "expired"
+
+
+class AuditAction(str, enum.Enum):
+    view_patient = "view_patient"
+    view_summary = "view_summary"
+    view_document = "view_document"
+    generate_summary = "generate_summary"
+    verify_items = "verify_items"
+    export_fhir = "export_fhir"
+    consent_grant = "consent_grant"
+    consent_revoke = "consent_revoke"
+    break_glass = "break_glass"
+
+
+class Consent(TimestampMixin, Base):
+    """A patient's recorded consent for staff to access their record.
+
+    Consent is explicit, scoped, and revocable in real time (DPDP Act 2023).
+    """
+
+    __tablename__ = "consents"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    patient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    scope: Mapped[ConsentScope] = mapped_column(
+        SAEnum(ConsentScope, name="consent_scope"),
+        default=ConsentScope.full_record,
+        nullable=False,
+    )
+    status: Mapped[ConsentStatus] = mapped_column(
+        SAEnum(ConsentStatus, name="consent_status"),
+        default=ConsentStatus.granted,
+        nullable=False,
+    )
+    # Why the record may be accessed, shown to the patient at collection time.
+    purpose: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    granted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    granted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class AuditLog(TimestampMixin, Base):
+    """Append-only record of who accessed what, and why.
+
+    Never store patient content here — ids, actor, and action only, so the
+    audit trail itself can never leak PHI (PROJECT.md sections 4 and 10).
+    """
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    actor_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    action: Mapped[AuditAction] = mapped_column(
+        SAEnum(AuditAction, name="audit_action"), nullable=False
+    )
+    resource_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    resource_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+    patient_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    # Emergency override: access granted without consent, flagged for review.
+    break_glass: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# Ambient consultation notes + summary evaluation
+# ---------------------------------------------------------------------------
+class ConsultNoteStatus(str, enum.Enum):
+    captured = "captured"
+    transcribing = "transcribing"
+    drafted = "drafted"
+    verified = "verified"
+    failed = "failed"
+
+
+class ConsultNote(TimestampMixin, Base):
+    """A consultation captured as audio/text and structured into a note.
+
+    The draft is always doctor-reviewed before it becomes part of the record;
+    it proposes, it never concludes (PROJECT.md section 4).
+    """
+
+    __tablename__ = "consult_notes"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    patient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    encounter_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("encounters.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    author_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    status: Mapped[ConsultNoteStatus] = mapped_column(
+        SAEnum(ConsultNoteStatus, name="consult_note_status"),
+        default=ConsultNoteStatus.captured,
+        nullable=False,
+    )
+    language: Mapped[str] = mapped_column(
+        String(16), default="en", nullable=False
+    )
+    # Object-storage key for the captured audio, if any.
+    audio_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Structured note (subjective/objective/assessment-free plan) + citations.
+    sections: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    error_reason: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
+
+class SummaryEval(TimestampMixin, Base):
+    """Quality scores for a generated summary (faithfulness/completeness/…)."""
+
+    __tablename__ = "summary_evals"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    summary_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("summaries.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    faithfulness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    completeness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    conciseness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    overall: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # How the scores were produced, e.g. "deterministic v1" or a judge model.
+    method: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

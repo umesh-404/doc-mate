@@ -15,12 +15,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
     auth,
+    consult,
     documents,
+    evaluation,
+    governance,
     interop,
     language,
     patients,
     safety,
     summaries,
+    surveillance,
+    triage,
     users,
     voice,
 )
@@ -64,6 +69,13 @@ app.include_router(safety.router)
 app.include_router(interop.router)
 app.include_router(language.router)
 app.include_router(voice.router)
+# Contract v3: governance (consent + audit), quality evaluation, OPD triage,
+# ambient consultation notes, and anonymized public-health surveillance.
+app.include_router(governance.router)
+app.include_router(evaluation.router)
+app.include_router(triage.router)
+app.include_router(consult.router)
+app.include_router(surveillance.router)
 
 
 @app.get("/", tags=["meta"])
