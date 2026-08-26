@@ -74,12 +74,14 @@ from sqlalchemy import select
 from app.db.models import (
     ClinicalItem,
     ClinicalItemKind,
+    ConsentScope,
     Document,
     DocumentStatus,
     DocumentType,
     Patient,
 )
 from app.db.session import get_sessionmaker
+from app.governance import get_latest_consent, grant_consent
 
 TODAY = date.today()
 
@@ -492,6 +494,24 @@ def _item_plan(spec: dict, rng: random.Random) -> list[dict]:
     return out
 
 
+def _seed_consent(session, patient_id) -> None:
+    """Record explicit consent for a cohort patient (idempotent).
+
+    Sensitive reads run through the consent gate (``CONSENT_ENFORCEMENT``), so
+    every seeded patient carries a real granted consent and the demo behaves
+    identically in ``audit_only`` and ``enforce`` mode. ``purpose`` is a
+    staff-authored label, never patient content.
+    """
+    if get_latest_consent(session, patient_id) is not None:
+        return
+    grant_consent(
+        session,
+        patient_id,
+        scope=ConsentScope.full_record,
+        purpose="outpatient consultation",
+    )
+
+
 def _seed_patient(session, index: int, spec: dict) -> bool:
     """Insert one cohort patient. Returns True when created, False when skipped."""
     abha_id = spec["abha_id"]
@@ -499,6 +519,9 @@ def _seed_patient(session, index: int, spec: dict) -> bool:
         select(Patient.id).where(Patient.abha_id == abha_id)
     ).scalar_one_or_none()
     if existing is not None:
+        # Re-running the seeder must leave an already-seeded patient fully
+        # usable under CONSENT_ENFORCEMENT=enforce.
+        _seed_consent(session, existing)
         return False
 
     age = spec["age"]
@@ -578,6 +601,8 @@ def _seed_patient(session, index: int, spec: dict) -> bool:
                 verified=verified,
             )
         )
+    session.commit()
+    _seed_consent(session, patient.id)
     return True
 
 

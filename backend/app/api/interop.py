@@ -22,10 +22,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api._consent import consent_gate
 from app.coding import map_condition, search as coding_search
 from app.core.security import get_current_user
-from app.db.models import ClinicalItem, Document, Encounter, Patient
+from app.db.models import AuditAction, ClinicalItem, Document, Encounter, Patient
 from app.db.session import get_db
+from app.governance import audited
 from app.fhir.abha import mock_identity
 from app.fhir.builder import build_patient_bundle
 from app.schemas.coding import CodeOut, ItemCodes
@@ -49,7 +51,13 @@ def _load_patient(db: Session, patient_id: uuid.UUID) -> Patient:
 @router.get(
     "/patients/{patient_id}/fhir",
     response_model=FHIRBundle,
-    dependencies=[Depends(get_current_user)],
+    dependencies=[
+        Depends(get_current_user),
+        # Exporting the whole record is the most sensitive read in the API:
+        # gate it on consent, then log it as an export_fhir access.
+        Depends(consent_gate(AuditAction.export_fhir)),
+        Depends(audited(AuditAction.export_fhir, resource_type="patient")),
+    ],
 )
 def patient_fhir_bundle(
     patient_id: uuid.UUID,

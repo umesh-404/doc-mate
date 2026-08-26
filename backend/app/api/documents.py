@@ -24,6 +24,7 @@ from fastapi import (
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api._consent import consent_gate
 from app.core.security import get_current_user, require_role
 from app.core.storage import build_storage_key, put_object
 from app.db.models import (
@@ -146,6 +147,13 @@ def list_documents(
     response_model=DocumentDetail,
     dependencies=[
         Depends(get_current_user),
+        # Patient is resolved from the document (this route is only indirectly
+        # patient-scoped); evaluated before the access is logged.
+        Depends(
+            consent_gate(
+                AuditAction.view_document, document_param="document_id"
+            )
+        ),
         Depends(
             audited(
                 AuditAction.view_document,

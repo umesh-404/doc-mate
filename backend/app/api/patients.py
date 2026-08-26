@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api._consent import consent_gate
 from app.core.security import get_current_user, require_role
 from app.db.models import AuditAction, Patient, UserRole
 from app.db.session import get_db
@@ -62,6 +63,9 @@ def list_patients(
     response_model=PatientRead,
     dependencies=[
         Depends(get_current_user),
+        # Consent is evaluated before the access is logged, so a denial is
+        # recorded as a denial rather than as a successful view.
+        Depends(consent_gate(AuditAction.view_patient)),
         Depends(
             audited(
                 AuditAction.view_patient,

@@ -56,6 +56,7 @@ from app.db.models import (
     Chunk,
     ClinicalItem,
     ClinicalItemKind,
+    ConsentScope,
     Document,
     DocumentStatus,
     DocumentType,
@@ -65,6 +66,7 @@ from app.db.models import (
     UserRole,
 )
 from app.db.session import get_sessionmaker
+from app.governance import get_latest_consent, grant_consent
 from app.ingestion.pipeline import _citation_label, chunk_text
 from app.llm import stub
 from app.safety.alerts import build_alerts
@@ -821,11 +823,37 @@ def _seed_users(session) -> None:
     session.commit()
 
 
+def _seed_consent(session, patient) -> None:
+    """Record explicit consent for a seeded patient (idempotent).
+
+    Sensitive reads run through the consent gate (``CONSENT_ENFORCEMENT``), so
+    seeded patients carry a real granted consent: the demo behaves identically
+    in ``audit_only`` and ``enforce`` mode, and the governance screens have
+    genuine rows to show. ``purpose`` is a staff-authored label, never patient
+    content.
+    """
+    if get_latest_consent(session, patient.id) is not None:
+        return
+    granted_by = session.execute(
+        select(User).where(User.email == "reception@demo")
+    ).scalar_one_or_none()
+    grant_consent(
+        session,
+        patient.id,
+        scope=ConsentScope.full_record,
+        purpose="outpatient consultation",
+        granted_by=granted_by,
+    )
+
+
 def _seed_patient(session, spec: dict) -> None:
     existing = session.execute(
         select(Patient).where(Patient.abha_id == spec["abha_id"])
     ).scalar_one_or_none()
     if existing is not None:
+        # Still ensure consent exists — re-running the seeder must leave an
+        # already-seeded patient fully usable under CONSENT_ENFORCEMENT=enforce.
+        _seed_consent(session, existing)
         print(f"patient exists: {spec['full_name']} ({spec['abha_id']})")
         return
 
@@ -957,6 +985,8 @@ def _seed_patient(session, spec: dict) -> None:
         )
     )
     session.commit()
+
+    _seed_consent(session, patient)
 
     doc_count = len(spec["documents"])
     item_count = sum(len(d.get("items", [])) for d in spec["documents"])

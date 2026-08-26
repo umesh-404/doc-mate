@@ -14,7 +14,11 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Patient, Summary
 from app.llm import service as llm
-from app.rag.retrieval import gather_context
+from app.rag.retrieval import (
+    gather_context,
+    narrative_context,
+    retrieve_narrative,
+)
 from app.safety.alerts import build_alerts
 from app.safety.grounding import check_grounding
 from app.schemas.summary import SummaryRead
@@ -55,8 +59,16 @@ def generate_patient_summary(
         return None
 
     language = language or patient.preferred_language or "en"
+    # Hybrid retrieval (see app/rag/retrieval.py): the exhaustive structured
+    # facts remain the backbone, plus semantically retrieved narrative prose
+    # from the pgvector chunk index for the story the structured items miss.
     context = gather_context(db, patient_id)
+    narrative_hits = retrieve_narrative(db, patient_id, context=context)
+    narrative = narrative_context(narrative_hits)
+    # Narrative chunks always cite a real document of this patient, so they
+    # widen the citable set without weakening the "no citation, no line" rule.
     allowed_ids = {c["document_id"] for c in context}
+    allowed_ids |= {n["document_id"] for n in narrative if n.get("document_id")}
 
     patient_view = {
         "full_name": patient.full_name,
@@ -65,14 +77,18 @@ def generate_patient_summary(
         "preferred_language": language,
     }
 
-    sections = llm.generate_summary(patient_view, context)
+    sections = llm.generate_summary(patient_view, context + narrative)
     sections = _enforce_citations(sections, allowed_ids)
 
     # Clinical-safety pass (PROJECT.md section 4): grade each generated line's
     # grounding against its cited source, then assemble neutral surfacing
     # alerts (allergies, interactions, out-of-range labs, missing data). Both
     # are deterministic and run identically in stub mode (no LLM/network).
-    sections, grounding = check_grounding(sections, context)
+    # Grounding is graded against structured facts *and* retrieved prose, so a
+    # line quoting a discharge summary verifies against the source words.
+    sections, grounding = check_grounding(sections, context + narrative)
+    # Alerts are computed from structured facts only — narrative prose is not a
+    # normalized clinical value and must never drive a safety alert.
     alerts = build_alerts(context)
 
     summary = Summary(
@@ -83,6 +99,12 @@ def generate_patient_summary(
         generation_metadata={
             "mode": "stub" if llm.is_stub_mode() else "provider",
             "fact_count": len(context),
+            # Hybrid retrieval provenance (ids/counts only, no patient text).
+            "retrieval": {
+                "structured_facts": len(context),
+                "narrative_chunks": len(narrative),
+                "mode": "exhaustive+narrative",
+            },
             # Persisted inside the existing JSON payload — no new DB columns.
             "grounding": grounding,
             "alerts": alerts,
@@ -92,10 +114,12 @@ def generate_patient_summary(
     db.commit()
     db.refresh(summary)
     logger.info(
-        "generated summary id=%s patient id=%s facts=%d grounding=%.2f alerts=%d",
+        "generated summary id=%s patient id=%s facts=%d chunks=%d "
+        "grounding=%.2f alerts=%d",
         summary.id,
         patient_id,
         len(context),
+        len(narrative),
         grounding["score"],
         len(alerts),
     )

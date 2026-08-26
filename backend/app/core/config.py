@@ -36,6 +36,15 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expiry: int = 1440  # minutes
 
+    # Governance ------------------------------------------------------------
+    # How the consent gate on clinically sensitive reads behaves:
+    #   "audit_only" (DEFAULT) — evaluate consent, audit the decision, never
+    #                            block. Safe for the demo and the smoke test.
+    #   "enforce"              — a denied decision returns 403 unless the
+    #                            caller supplies a break-glass reason.
+    #   "off"                  — skip the check entirely (no audit row).
+    consent_enforcement: str = "audit_only"
+
     # Object storage (S3-compatible) ----------------------------------------
     s3_endpoint: str = "http://localhost:9000"
     s3_bucket: str = "docmate"
@@ -49,6 +58,16 @@ class Settings(BaseSettings):
     llm_model_reasoning: str | None = None
     embedding_model: str | None = None
     embedding_dim: int = 1536
+
+    @property
+    def consent_mode(self) -> str:
+        """Validated consent-enforcement mode; unknown values fail safe.
+
+        An unrecognised value degrades to ``audit_only`` rather than ``off`` —
+        a typo must never silently disable the governance trail.
+        """
+        mode = (self.consent_enforcement or "").strip().lower()
+        return mode if mode in ("off", "audit_only", "enforce") else "audit_only"
 
     @property
     def cors_origins_list(self) -> list[str]:

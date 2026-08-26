@@ -13,6 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api._consent import consent_gate
 from app.core.security import get_current_user
 from app.db.models import AuditAction, Patient, Summary
 from app.db.session import get_db, get_sessionmaker
@@ -62,6 +63,7 @@ def create_summary(
     response_model=SummaryRead,
     dependencies=[
         Depends(get_current_user),
+        Depends(consent_gate(AuditAction.view_summary)),
         Depends(audited(AuditAction.view_summary, resource_type="summary")),
     ],
 )

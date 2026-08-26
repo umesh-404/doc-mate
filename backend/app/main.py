@@ -23,6 +23,7 @@ from app.api import (
     language,
     patients,
     safety,
+    search,
     summaries,
     surveillance,
     triage,
@@ -76,6 +77,8 @@ app.include_router(evaluation.router)
 app.include_router(triage.router)
 app.include_router(consult.router)
 app.include_router(surveillance.router)
+# Semantic search over the pgvector chunk index (patient-scoped).
+app.include_router(search.router)
 
 
 @app.get("/", tags=["meta"])
