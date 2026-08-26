@@ -177,3 +177,103 @@ your LiteLLM version's exact base-URL variable (`OLLAMA_API_BASE` /
   shared shapes (runs offline, no key).
 - `python backend/scripts/test_llm.py` — real-mode smoke test on a generated
   sample image. In stub mode (no key) it prints a skip message and exits 0.
+
+## Offline / self-hosted (MedGemma & open models)
+
+Government hospitals often cannot send patient data to a third-party cloud. The
+whole point of the LiteLLM abstraction (PROJECT.md §5, §8) is that the exact same
+Doc-mate build runs **fully on-premise** — extraction, summary, embeddings,
+translation, and voice — with **no data leaving the hospital network**. This
+section is the concrete recipe.
+
+### Why on-prem (the privacy rationale)
+
+- **PHI never leaves the premises.** No image, lab value, or note is sent to an
+  external API. This is the honest answer to "is patient data safe?" for a
+  government deployment.
+- **No per-call cost and no internet dependency.** Rural / intermittent-network
+  sites keep working.
+- **Auditable + swappable.** Providers are reached only through `app/llm/`, so
+  moving from a cloud pilot to a self-hosted rollout is an **env-var change**,
+  not a rewrite.
+
+### MedGemma 1.5 (open-weight, multimodal)
+
+MedGemma is Google's open-weight, medically-tuned Gemma variant; the **1.5**
+release (open weights, Jan 2026) is multimodal — it reads scans, photographed
+documents, and handwriting — which makes it a strong fit for Doc-mate's
+extraction path. It is licensed for local deployment. Serve it behind an
+OpenAI-compatible endpoint with **Ollama** or **vLLM**, then point the standard
+env vars at the local server.
+
+> Honesty note: real MedGemma inference **requires a GPU** (see hardware below).
+> If you have no GPU, Doc-mate still runs end-to-end in **stub mode** (the
+> default) with zero model dependencies — nothing below is needed for the
+> offline demo path. Stub mode is for demos, not real clinical reading.
+
+#### Option A — Ollama (simplest)
+
+```bash
+# On the box that has the GPU:
+ollama pull medgemma-1.5            # multimodal open weights
+ollama pull nomic-embed-text        # open embedding model (768-dim)
+
+# Doc-mate env (backend/.env):
+LLM_PROVIDER=ollama
+LLM_MODEL_MULTIMODAL=ollama/medgemma-1.5     # extraction (scans/photos/handwriting)
+LLM_MODEL_REASONING=ollama/medgemma-1.5      # summary + translation + simplification
+EMBEDDING_MODEL=ollama/nomic-embed-text
+EMBEDDING_DIM=768                            # MUST match the model + pgvector column
+OLLAMA_API_KEY=local                         # any non-empty value → leaves stub mode
+OLLAMA_API_BASE=http://localhost:11434
+```
+
+#### Option B — vLLM (higher throughput, OpenAI-compatible)
+
+```bash
+# Serve MedGemma with vLLM's OpenAI-compatible server (GPU host):
+python -m vllm.entrypoints.openai.api_server \
+  --model google/medgemma-1.5 --port 8000
+
+# Doc-mate env:
+LLM_PROVIDER=vllm
+LLM_MODEL_MULTIMODAL=openai/google/medgemma-1.5
+LLM_MODEL_REASONING=openai/google/medgemma-1.5
+EMBEDDING_MODEL=ollama/nomic-embed-text      # or a vLLM-served embedding model
+EMBEDDING_DIM=768
+VLLM_API_KEY=local                           # any non-empty value → leaves stub mode
+OPENAI_API_BASE=http://localhost:8000/v1     # vLLM speaks the OpenAI protocol
+```
+
+Confirm your LiteLLM version's exact base-URL variable (`OLLAMA_API_BASE` for
+Ollama; `OPENAI_API_BASE` for vLLM's OpenAI endpoint). `EMBEDDING_DIM` **must**
+equal what the embedding model emits **and** the pgvector column width — the real
+`embed()` raises a clear error on a mismatch rather than failing at the DB.
+
+### Multilingual + voice on-prem
+
+The multilingual (`app/language/`) and voice (`app/voice/`) layers follow the
+same stub-first / real-optional pattern and honor the same switch:
+
+- **Translation & plain-language** — real mode routes through this same `app/llm`
+  layer (so MedGemma or any open text model does the translating on-prem, with a
+  prompt that preserves numbers/doses/drug names); the default is an offline
+  **glossary** (bundled, no model) for the fixed section titles and common
+  clinical phrases. Full sentence-level MT needs real mode.
+- **Voice intake** — real mode uses **`faster-whisper`** (`small` / `base`)
+  running **on-device** (CPU is fine; a GPU is faster), so intake audio never
+  leaves the premises either. With the library or model absent it returns a
+  deterministic stub transcription so the flow still works offline.
+
+### Hardware notes (be honest with judges)
+
+| Component | Stub mode | Real on-prem |
+|-----------|-----------|--------------|
+| MedGemma 1.5 (multimodal extraction + reasoning) | none | **GPU required** — ~16–24 GB VRAM for a quantized/small config; more for full precision. Ollama Q4 lowers the bar; vLLM maximizes throughput. |
+| Open embeddings (e.g. `nomic-embed-text`) | none | CPU-workable; GPU faster |
+| Whisper voice (`faster-whisper` small/base) | none | CPU fine (int8); GPU faster |
+| Postgres + pgvector, MinIO | required | required |
+
+Bottom line: **stub mode needs nothing** (no GPU, no keys, no internet) and is
+the default; a real on-prem deployment of MedGemma **requires a GPU**, but buys
+the privacy guarantee that makes Doc-mate credible for government hospitals.

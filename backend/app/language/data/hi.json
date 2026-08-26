@@ -1,0 +1,37 @@
+{
+  "language": "hi",
+  "name": "Hindi",
+  "section_titles": {
+    "Current complaint / reason for visit": "वर्तमान शिकायत / आने का कारण",
+    "Active problems & chronic conditions": "सक्रिय समस्याएँ और पुरानी बीमारियाँ",
+    "Allergies": "एलर्जी",
+    "Current medications": "वर्तमान दवाइयाँ",
+    "Recent labs & trends": "हाल की जाँचें और रुझान",
+    "Past encounters / procedures": "पिछली मुलाक़ातें / प्रक्रियाएँ",
+    "Flags & things to verify": "ध्यान देने योग्य बातें / सत्यापित करने हेतु"
+  },
+  "phrases": {
+    "Presenting for review of": "समीक्षा हेतु प्रस्तुत:",
+    "confirm at reception before use": "उपयोग से पहले रिसेप्शन पर पुष्टि करें",
+    "double-check source": "स्रोत की दोबारा जाँच करें",
+    "No ingested documents yet for this patient.": "इस रोगी के लिए अभी तक कोई दस्तावेज़ नहीं।",
+    "Low-confidence": "कम-विश्वास",
+    "Unverified": "असत्यापित",
+    "medication": "दवा",
+    "condition": "बीमारी",
+    "allergy": "एलर्जी",
+    "observation": "जाँच",
+    "procedure": "प्रक्रिया"
+  },
+  "plain_lead": "यह सारांश केवल जानकारी हेतु है और इसमें कोई निदान नहीं है।",
+  "plain_labels": {
+    "complaint": "आने का कारण",
+    "problems": "मौजूदा समस्याएँ",
+    "allergies": "एलर्जी",
+    "medications": "दवाइयाँ",
+    "labs": "जाँच के परिणाम",
+    "encounters": "पिछला इतिहास",
+    "flags": "सत्यापित करने योग्य बातें"
+  },
+  "stub_note": "मशीन/शब्दकोश आधारित अनुवाद — पूर्ण अनुवाद हेतु ऑनलाइन मोड आवश्यक। नैदानिक मान अपरिवर्तित रखे गए हैं।"
+}

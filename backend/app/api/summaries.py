@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.security import get_current_user
 from app.db.models import Patient, Summary
 from app.db.session import get_db, get_sessionmaker
-from app.rag.summary import generate_patient_summary
+from app.rag.summary import build_summary_read, generate_patient_summary
 from app.schemas.summary import SummaryGenerateResponse, SummaryRead
 
 router = APIRouter(prefix="/patients", tags=["summaries"])
@@ -29,16 +29,6 @@ def _run_summary(patient_id: uuid.UUID, language: str | None) -> None:
         generate_patient_summary(session, patient_id, language)
     finally:
         session.close()
-
-
-def _to_read(summary: Summary) -> SummaryRead:
-    return SummaryRead(
-        id=summary.id,
-        patient_id=summary.patient_id,
-        language=summary.language,
-        generated_at=summary.created_at,
-        sections=summary.sections or [],
-    )
 
 
 @router.post(
@@ -81,4 +71,4 @@ def get_summary(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="No summary yet"
         )
-    return _to_read(summary)
+    return build_summary_read(summary)

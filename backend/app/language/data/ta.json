@@ -1,0 +1,37 @@
+{
+  "language": "ta",
+  "name": "Tamil",
+  "section_titles": {
+    "Current complaint / reason for visit": "தற்போதைய புகார் / வருகைக்கான காரணம்",
+    "Active problems & chronic conditions": "செயலில் உள்ள பிரச்சினைகள் & நாள்பட்ட நிலைமைகள்",
+    "Allergies": "ஒவ்வாமைகள்",
+    "Current medications": "தற்போதைய மருந்துகள்",
+    "Recent labs & trends": "சமீபத்திய பரிசோதனைகள் & போக்குகள்",
+    "Past encounters / procedures": "கடந்த சந்திப்புகள் / செயல்முறைகள்",
+    "Flags & things to verify": "கவனிக்க வேண்டியவை / சரிபார்க்க வேண்டியவை"
+  },
+  "phrases": {
+    "Presenting for review of": "மறுஆய்வுக்காக வழங்கப்படுகிறது:",
+    "confirm at reception before use": "பயன்படுத்தும் முன் வரவேற்பில் உறுதிப்படுத்தவும்",
+    "double-check source": "மூலத்தை மீண்டும் சரிபார்க்கவும்",
+    "No ingested documents yet for this patient.": "இந்த நோயாளிக்கு இதுவரை ஆவணங்கள் எதுவும் இல்லை.",
+    "Low-confidence": "குறைந்த-நம்பிக்கை",
+    "Unverified": "சரிபார்க்கப்படாதது",
+    "medication": "மருந்து",
+    "condition": "நோய்",
+    "allergy": "ஒவ்வாமை",
+    "observation": "பரிசோதனை",
+    "procedure": "செயல்முறை"
+  },
+  "plain_lead": "இந்தச் சுருக்கம் தகவலுக்காக மட்டுமே; இதில் எந்த நோயறிதலும் இல்லை.",
+  "plain_labels": {
+    "complaint": "வருகைக்கான காரணம்",
+    "problems": "தற்போதைய பிரச்சினைகள்",
+    "allergies": "ஒவ்வாமைகள்",
+    "medications": "மருந்துகள்",
+    "labs": "பரிசோதனை முடிவுகள்",
+    "encounters": "கடந்தகால வரலாறு",
+    "flags": "சரிபார்க்க வேண்டியவை"
+  },
+  "stub_note": "இயந்திரம்/அகராதி அடிப்படையிலான மொழிபெயர்ப்பு — முழு மொழிபெயர்ப்புக்கு ஆன்லைன் பயன்முறை தேவை. மருத்துவ மதிப்புகள் மாற்றப்படவில்லை."
+}

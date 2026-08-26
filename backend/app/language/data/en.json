@@ -1,0 +1,17 @@
+{
+  "language": "en",
+  "name": "English",
+  "section_titles": {},
+  "phrases": {},
+  "plain_lead": "This summary is informational only and contains no diagnosis.",
+  "plain_labels": {
+    "complaint": "Reason for visit",
+    "problems": "Current problems",
+    "allergies": "Allergies",
+    "medications": "Medications",
+    "labs": "Test results",
+    "encounters": "Past history",
+    "flags": "Things to verify"
+  },
+  "stub_note": ""
+}

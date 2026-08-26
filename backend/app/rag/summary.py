@@ -15,6 +15,9 @@ from sqlalchemy.orm import Session
 from app.db.models import Patient, Summary
 from app.llm import service as llm
 from app.rag.retrieval import gather_context
+from app.safety.alerts import build_alerts
+from app.safety.grounding import check_grounding
+from app.schemas.summary import SummaryRead
 
 logger = logging.getLogger("docmate.rag")
 
@@ -65,6 +68,13 @@ def generate_patient_summary(
     sections = llm.generate_summary(patient_view, context)
     sections = _enforce_citations(sections, allowed_ids)
 
+    # Clinical-safety pass (PROJECT.md section 4): grade each generated line's
+    # grounding against its cited source, then assemble neutral surfacing
+    # alerts (allergies, interactions, out-of-range labs, missing data). Both
+    # are deterministic and run identically in stub mode (no LLM/network).
+    sections, grounding = check_grounding(sections, context)
+    alerts = build_alerts(context)
+
     summary = Summary(
         patient_id=patient_id,
         encounter_id=None,
@@ -73,15 +83,39 @@ def generate_patient_summary(
         generation_metadata={
             "mode": "stub" if llm.is_stub_mode() else "provider",
             "fact_count": len(context),
+            # Persisted inside the existing JSON payload — no new DB columns.
+            "grounding": grounding,
+            "alerts": alerts,
         },
     )
     db.add(summary)
     db.commit()
     db.refresh(summary)
     logger.info(
-        "generated summary id=%s patient id=%s facts=%d",
+        "generated summary id=%s patient id=%s facts=%d grounding=%.2f alerts=%d",
         summary.id,
         patient_id,
         len(context),
+        grounding["score"],
+        len(alerts),
     )
     return summary
+
+
+def build_summary_read(summary: Summary) -> SummaryRead:
+    """Build the API ``SummaryRead`` for a persisted summary, including the
+    clinical-safety grounding + alerts stashed in ``generation_metadata``.
+
+    Use this from the summary router so the safety fields reach the frontend.
+    Falls back to safe defaults for summaries generated before the safety pass.
+    """
+    meta = summary.generation_metadata or {}
+    return SummaryRead(
+        id=summary.id,
+        patient_id=summary.patient_id,
+        language=summary.language,
+        generated_at=summary.created_at,
+        sections=summary.sections or [],
+        grounding=meta.get("grounding") or {},
+        alerts=meta.get("alerts") or [],
+    )

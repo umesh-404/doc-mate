@@ -19,5 +19,9 @@ pypdf>=4.2,<6.0
 pillow>=10.3,<12.0
 # Renders PDF pages to images for multimodal extraction of scans/handwriting.
 pymupdf>=1.24,<2.0
+# Optional (real mode only; stub voice needs nothing): on-device speech-to-text
+# for /voice/transcribe. Keeps audio on-prem (CPU int8). Uncomment to enable.
+# faster-whisper>=1.0,<2.0
+
 # Test runner.
 pytest>=8.2,<9.0

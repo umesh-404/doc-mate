@@ -13,7 +13,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, documents, patients, summaries, users
+from app.api import (
+    auth,
+    documents,
+    interop,
+    language,
+    patients,
+    safety,
+    summaries,
+    users,
+    voice,
+)
 from app.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -48,6 +58,12 @@ app.include_router(patients.router)
 app.include_router(documents.router)
 app.include_router(summaries.router)
 app.include_router(users.router)
+# Enhancement routers (Contract v2): clinical safety, interoperability,
+# multilingual summaries, and voice intake.
+app.include_router(safety.router)
+app.include_router(interop.router)
+app.include_router(language.router)
+app.include_router(voice.router)
 
 
 @app.get("/", tags=["meta"])
