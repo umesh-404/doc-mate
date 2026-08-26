@@ -96,13 +96,13 @@ export function VoiceCapture({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2" aria-live="polite">
         {canRecord &&
           (status === "recording" ? (
             <button
               type="button"
               onClick={stopRecording}
-              className="inline-flex items-center gap-1.5 rounded-md border border-danger/40 bg-danger-surface px-3 py-1.5 text-xs font-medium text-danger"
+              className="inline-flex min-h-[2rem] items-center gap-1.5 rounded-md border border-danger/45 bg-danger-surface px-3 py-1.5 text-xs font-semibold text-danger transition-colors hover:bg-danger/15 active:translate-y-px"
             >
               <Square className="h-3.5 w-3.5" aria-hidden />
               {t.voice.stop}
@@ -113,7 +113,7 @@ export function VoiceCapture({
               onClick={startRecording}
               disabled={busy}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-muted",
+                "inline-flex min-h-[2rem] items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-surface-muted active:translate-y-px",
                 "disabled:pointer-events-none disabled:opacity-50",
               )}
             >
@@ -131,7 +131,7 @@ export function VoiceCapture({
           onClick={() => fileInputRef.current?.click()}
           disabled={busy || status === "recording"}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-muted",
+            "inline-flex min-h-[2rem] items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-border-strong hover:bg-surface-muted hover:text-foreground active:translate-y-px",
             "disabled:pointer-events-none disabled:opacity-50",
           )}
         >
@@ -148,7 +148,7 @@ export function VoiceCapture({
 
         {status === "recording" && (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-danger">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-danger" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-danger" aria-hidden />
             {t.voice.recording}
           </span>
         )}
@@ -159,9 +159,13 @@ export function VoiceCapture({
       </div>
 
       {!canRecord && (
-        <p className="text-[11px] text-muted">{t.voice.noRecorder}</p>
+        <p className="text-2xs leading-relaxed text-muted">{t.voice.noRecorder}</p>
       )}
-      {error && <p className="text-xs text-danger">{error}</p>}
+      {error && (
+        <p role="alert" className="text-xs font-medium text-danger">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

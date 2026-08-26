@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowLeft, FileStack, Stethoscope } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  FileStack,
+  Loader2,
+  Stethoscope,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { DocumentVerifyCard } from "@/components/reception/DocumentVerifyCard";
@@ -9,7 +15,9 @@ import { UploadDropzone } from "@/components/UploadDropzone";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
+import { SelectField } from "@/components/ui/Input";
+import { Skeleton, SkeletonDocList } from "@/components/ui/Skeleton";
+import { EmptyState, ErrorState } from "@/components/ui/States";
 import { useI18n } from "@/lib/i18n";
 import { useDocuments, usePatient, useUploadDocument } from "@/lib/queries";
 import { DOC_TYPES } from "@/lib/types";
@@ -38,17 +46,17 @@ export default function ReceptionPatientPage({
 
   return (
     <RequireRole role="reception">
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <Link
           href="/reception/patients"
-          className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-md py-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" aria-hidden />
           {t.nav.patients}
         </Link>
         <Link href={`/doctor/patients/${patientId}`}>
           <Button variant="secondary" size="sm">
-            <Stethoscope className="h-4 w-4" aria-hidden />
+            <Stethoscope className="h-3.5 w-3.5" aria-hidden />
             {t.docs.openSnapshot}
           </Button>
         </Link>
@@ -56,23 +64,34 @@ export default function ReceptionPatientPage({
 
       {/* Patient identity */}
       {patient.isLoading ? (
-        <LoadingState label={t.states.loading} />
+        <div
+          className="mb-5 rounded-lg border border-border bg-surface p-5 shadow-card"
+          role="status"
+          aria-busy="true"
+        >
+          <span className="sr-only">{t.states.loading}</span>
+          <Skeleton className="h-7 w-56" />
+          <Skeleton className="mt-2 h-3.5 w-80 max-w-full" />
+        </div>
       ) : patient.isError ? (
         <ErrorState
+          className="mb-5"
           title={t.patients.loadError}
           body={t.states.errorBody}
           onRetry={() => void patient.refetch()}
           retryLabel={t.common.retry}
         />
       ) : patient.data ? (
-        <div className="mb-6 rounded-lg border border-border bg-surface p-5 shadow-card">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="mb-5 animate-rise-in rounded-lg border border-border bg-surface p-4 shadow-card sm:p-5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               {patient.data.full_name}
             </h1>
-            <Badge tone="neutral">{patient.data.id}</Badge>
+            <Badge tone="outline" className="font-mono">
+              {patient.data.id}
+            </Badge>
           </div>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-sm text-muted text-pretty">
             {[
               patient.data.age != null ? `${patient.data.age} yrs` : null,
               patient.data.sex,
@@ -86,7 +105,7 @@ export default function ReceptionPatientPage({
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Upload */}
         <div className="lg:col-span-1">
           <Card className="lg:sticky lg:top-20">
@@ -94,31 +113,40 @@ export default function ReceptionPatientPage({
               <CardTitle>{t.docs.uploadTitle}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="docType" className="text-sm font-medium">
-                  {t.docs.docType}
-                </label>
-                <select
-                  id="docType"
-                  value={docType}
-                  onChange={(e) => setDocType(e.target.value)}
-                  className="h-10 rounded-md border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                >
-                  {DOC_TYPES.map((d) => (
-                    <option key={d.value} value={d.value}>
-                      {t.docs.types[d.labelKey as keyof typeof t.docs.types]}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <SelectField
+                id="docType"
+                label={t.docs.docType}
+                value={docType}
+                onChange={(e) => setDocType(e.target.value)}
+              >
+                {DOC_TYPES.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {t.docs.types[d.labelKey as keyof typeof t.docs.types]}
+                  </option>
+                ))}
+              </SelectField>
+
               <UploadDropzone onUpload={onUpload} busy={upload.isPending} />
-              {upload.isPending && (
-                <p className="text-xs text-muted">{t.docs.uploading}</p>
-              )}
-              {upload.isError && (
-                <p className="text-xs text-danger">{t.docs.uploadError}</p>
-              )}
-              <p className="text-xs leading-relaxed text-muted">
+
+              <div aria-live="polite" className="min-h-[1rem]">
+                {upload.isPending && (
+                  <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    {t.docs.uploading}
+                  </p>
+                )}
+                {upload.isError && (
+                  <p
+                    role="alert"
+                    className="flex items-center gap-1.5 text-xs font-medium text-danger"
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+                    {t.docs.uploadError}
+                  </p>
+                )}
+              </div>
+
+              <p className="border-t border-border pt-3 text-xs leading-relaxed text-muted">
                 {t.newPatient.verifyNote}
               </p>
             </CardContent>
@@ -127,17 +155,19 @@ export default function ReceptionPatientPage({
 
         {/* Documents + verify */}
         <div className="lg:col-span-2">
-          <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+          <div className="mb-2.5 flex items-center gap-2">
+            <h2 className="text-2xs font-bold uppercase tracking-[0.09em] text-muted">
               {t.docs.documentsTitle}
             </h2>
             {docs.length > 0 && (
-              <span className="text-xs text-muted">({docs.length})</span>
+              <span className="rounded-full bg-surface-muted px-1.5 py-px text-2xs font-semibold tabular-nums text-muted">
+                {docs.length}
+              </span>
             )}
           </div>
 
           {documents.isLoading ? (
-            <LoadingState label={t.states.loading} />
+            <SkeletonDocList label={t.states.loading} />
           ) : documents.isError ? (
             <ErrorState
               title={t.states.errorTitle}

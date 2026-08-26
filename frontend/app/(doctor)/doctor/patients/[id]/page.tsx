@@ -2,18 +2,25 @@
 
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { RequireRole } from "@/components/RequireRole";
+import { ShortcutsHelp, ShortcutsHint } from "@/components/ShortcutsHelp";
 import { PatientSnapshotView } from "@/components/snapshot/PatientSnapshotView";
 import { PlainLanguagePanel } from "@/components/snapshot/PlainLanguagePanel";
-import { SnapshotToolbar, SUMMARY_LANGS } from "@/components/snapshot/SnapshotToolbar";
+import {
+  SnapshotToolbar,
+  SUMMARY_LANGS,
+} from "@/components/snapshot/SnapshotToolbar";
 import { SummaryView } from "@/components/snapshot/SummaryView";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
-import { ErrorState, LoadingState } from "@/components/ui/States";
+import { SnapshotSkeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/States";
 import { api, ApiError, type SummaryLang } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { getMockSnapshot } from "@/lib/mock-data";
+import { useShortcuts } from "@/lib/shortcuts";
+import { useTheme } from "@/lib/theme";
 import {
   useGenerateSummary,
   useInteractions,
@@ -36,6 +43,7 @@ export default function PatientSnapshotPage({
   params: { id: string };
 }) {
   const { t } = useI18n();
+  const { cycleTheme } = useTheme();
   const patientId = params.id;
 
   const [polling, setPolling] = useState(false);
@@ -44,6 +52,10 @@ export default function PatientSnapshotPage({
   const [plainOpen, setPlainOpen] = useState(false);
   const [exportingFhir, setExportingFhir] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // Index of the section the j/k navigation is currently parked on.
+  const sectionIndex = useRef(-1);
 
   const patient = usePatient(patientId);
   const summary = useSummary(patientId, polling);
@@ -64,6 +76,38 @@ export default function PatientSnapshotPage({
   const displaySummary = needTranslate
     ? (translated.data ?? baseSummary)
     : baseSummary;
+
+  /**
+   * Move focus + scroll between snapshot sections. Sections opt in by carrying
+   * `data-section`; the DOM is the source of truth so this stays correct no
+   * matter which sections the backend returned.
+   */
+  const moveSection = useCallback((delta: number) => {
+    const nodes = Array.from(
+      document.querySelectorAll<HTMLElement>("main [data-section]"),
+    );
+    if (nodes.length === 0) return;
+    let next = sectionIndex.current + delta;
+    if (next < 0) next = 0;
+    if (next > nodes.length - 1) next = nodes.length - 1;
+    sectionIndex.current = next;
+    const el = nodes[next];
+    if (!el) return;
+    el.scrollIntoView({ block: "start", behavior: "smooth" });
+    el.focus({ preventScroll: true });
+  }, []);
+
+  useShortcuts({
+    j: () => moveSection(1),
+    arrowdown: () => moveSection(1),
+    k: () => moveSection(-1),
+    arrowup: () => moveSection(-1),
+    p: () => window.print(),
+    b: () => setPlainOpen((v) => !v),
+    t: () => cycleTheme(),
+    "?": () => setHelpOpen(true),
+    escape: () => setHelpOpen(false),
+  });
 
   function onGenerate() {
     generate.mutate(undefined, {
@@ -100,19 +144,39 @@ export default function PatientSnapshotPage({
   const generating = generate.isPending || polling;
 
   return (
-    <RequireRole role="doctor">
-      <div className="mb-5 flex items-center justify-between gap-3 print:hidden">
+    <RequireRole
+      role="doctor"
+      headerActions={
+        <ShortcutsHint onOpen={() => setHelpOpen(true)} className="hidden sm:inline-flex" />
+      }
+    >
+      <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
         <Link
           href="/doctor/patients"
-          className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-md py-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" aria-hidden />
           {t.nav.patients}
         </Link>
-        <span className="text-sm font-medium text-muted">{t.snapshot.title}</span>
+        <span className="text-2xs font-semibold uppercase tracking-[0.09em] text-muted">
+          {t.snapshot.title}
+        </span>
       </div>
 
       {renderBody()}
+
+      <ShortcutsHelp
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        entries={[
+          { keys: ["j", "↓"], label: t.shortcuts.nextSection },
+          { keys: ["k", "↑"], label: t.shortcuts.prevSection },
+          { keys: ["b"], label: t.shortcuts.plain },
+          { keys: ["p"], label: t.shortcuts.print },
+          { keys: ["t"], label: t.shortcuts.theme },
+          { keys: ["?"], label: t.shortcuts.help },
+        ]}
+      />
     </RequireRole>
   );
 
@@ -140,13 +204,13 @@ export default function PatientSnapshotPage({
     }
 
     if (patient.isLoading || summary.isLoading) {
-      return <LoadingState label={t.states.loading} />;
+      return <SnapshotSkeleton label={t.states.loading} />;
     }
 
     // Real summary available — the primary path.
     if (displaySummary && patient.data) {
       return (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4">
           <SnapshotToolbar
             lang={activeLang}
             onLang={setViewLang}
@@ -158,7 +222,10 @@ export default function PatientSnapshotPage({
             onPrint={() => window.print()}
           />
           {exportError && (
-            <p className="rounded-md border border-danger/30 bg-danger-surface px-3 py-2 text-sm text-danger print:hidden">
+            <p
+              role="alert"
+              className="rounded-md border border-danger/35 bg-danger-surface px-3 py-2 text-sm font-medium text-danger print:hidden"
+            >
               {exportError}
             </p>
           )}
@@ -179,24 +246,43 @@ export default function PatientSnapshotPage({
       );
     }
 
-    // Generation in progress.
+    // Generation in progress — show the shape of what is coming.
     if (generating) {
-      return <LoadingState label={t.snapshot.generating} />;
+      return (
+        <div className="flex flex-col gap-4">
+          <div
+            className="flex items-center gap-2.5 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+            <span>
+              {t.snapshot.generating}
+              <span className="ml-1.5 font-normal text-muted">
+                {t.snapshot.generatingBody}
+              </span>
+            </span>
+          </div>
+          <SnapshotSkeleton label={t.snapshot.generating} />
+        </div>
+      );
     }
 
     // No summary yet (404) — offer to generate, with an optional sample preview.
     return (
-      <div className="flex flex-col gap-5">
-        <Card>
-          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+      <div className="flex flex-col gap-4">
+        <Card className="animate-rise-in border-dashed">
+          <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
               <Sparkles className="h-6 w-6" aria-hidden />
             </span>
             <div className="max-w-md">
               <h2 className="text-lg font-semibold text-foreground">
                 {t.snapshot.generateTitle}
               </h2>
-              <p className="mt-1 text-sm text-muted">{t.snapshot.generateBody}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted text-pretty">
+                {t.snapshot.generateBody}
+              </p>
             </div>
             <Button size="lg" onClick={onGenerate} disabled={generate.isPending}>
               {generate.isPending ? (
@@ -207,12 +293,15 @@ export default function PatientSnapshotPage({
               {t.snapshot.generateAction}
             </Button>
             {generate.isError && (
-              <p className="text-sm text-danger">{t.common.error}</p>
+              <p role="alert" className="text-sm font-medium text-danger">
+                {t.common.error}
+              </p>
             )}
             <button
               type="button"
               onClick={() => setShowSample((v) => !v)}
-              className="text-xs font-medium text-primary hover:underline"
+              aria-expanded={showSample}
+              className="rounded text-xs font-semibold text-primary underline-offset-4 hover:underline"
             >
               {showSample ? t.snapshot.hideSample : t.snapshot.viewSample}
             </button>
@@ -220,8 +309,11 @@ export default function PatientSnapshotPage({
         </Card>
 
         {showSample && (
-          <div className="flex flex-col gap-3">
-            <p className="rounded-md border border-warning/30 bg-warning-surface/50 px-3 py-2 text-xs font-medium text-warning">
+          <div className="flex animate-expand-down flex-col gap-3">
+            <p
+              role="note"
+              className="rounded-md border border-warning/45 bg-warning-surface px-3.5 py-2.5 text-xs font-semibold text-warning"
+            >
               {t.snapshot.sampleBanner}
             </p>
             <PatientSnapshotView data={getMockSnapshot(patientId)} />

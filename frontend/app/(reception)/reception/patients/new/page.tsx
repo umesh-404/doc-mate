@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BadgeCheck, Loader2, Search } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Loader2, Search, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -9,7 +9,7 @@ import { VoiceCapture } from "@/components/VoiceCapture";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
+import { Input, SelectField, Textarea } from "@/components/ui/Input";
 import { api, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { localeNames, locales } from "@/lib/i18n/dictionaries";
@@ -38,9 +38,23 @@ export default function NewPatientPage() {
   const [lang, setLang] = useState<string>("en");
   const [note, setNote] = useState("");
 
+  // Inline validation is shown only after a submit attempt so the form does
+  // not scold the user mid-typing.
+  const [touched, setTouched] = useState(false);
+
   const [looking, setLooking] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [lookupVerified, setLookupVerified] = useState<boolean | null>(null);
+
+  const nameError =
+    touched && !fullName.trim() ? t.newPatient.nameRequired : null;
+  const ageValue = age.trim() ? Number(age.trim()) : null;
+  const ageError =
+    touched &&
+    ageValue !== null &&
+    (Number.isNaN(ageValue) || ageValue < 0 || ageValue > 130)
+      ? t.newPatient.ageInvalid
+      : null;
 
   async function onAbhaLookup() {
     const id = abhaId.trim();
@@ -67,6 +81,7 @@ export default function NewPatientPage() {
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setTouched(true);
     if (!fullName.trim()) return;
 
     const body: NewPatient = {
@@ -87,7 +102,9 @@ export default function NewPatientPage() {
         router.push(`/reception/patients/${patient.id}`);
       },
       onError: (err) => {
-        setError(err instanceof ApiError ? err.message : t.newPatient.createError);
+        setError(
+          err instanceof ApiError ? err.message : t.newPatient.createError,
+        );
       },
     });
   }
@@ -96,36 +113,45 @@ export default function NewPatientPage() {
 
   return (
     <RequireRole role="reception">
-      <div className="mb-6 flex items-center gap-3">
+      <div className="mb-4 flex items-center gap-3">
         <Link
           href="/reception/patients"
-          className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-md py-1 text-sm font-medium text-muted transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" aria-hidden />
           {t.common.back}
         </Link>
       </div>
 
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {t.nav.newPatient}
-      </h1>
-      <p className="mb-6 text-sm text-muted">{t.newPatient.intro}</p>
+      <div className="mb-5">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          {t.nav.newPatient}
+        </h1>
+        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted text-pretty">
+          {t.newPatient.intro}
+        </p>
+      </div>
 
-      <form onSubmit={onSubmit} className="grid gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2">
+      <form onSubmit={onSubmit} noValidate className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="flex flex-col gap-5 lg:col-span-2">
           {/* ABHA lookup */}
           <Card>
             <CardHeader>
               <CardTitle>{t.abha.title}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <p className="text-xs leading-relaxed text-muted">{t.abha.hint}</p>
+              <p className="text-xs leading-relaxed text-muted text-pretty">
+                {t.abha.hint}
+              </p>
               <div className="flex flex-wrap items-end gap-3">
                 <div className="min-w-[200px] flex-1">
                   <Input
                     name="abhaId"
                     label={t.newPatient.abhaId}
                     placeholder={t.abha.placeholder}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    className="font-mono"
                     value={abhaId}
                     onChange={(e) => setAbhaId(e.target.value)}
                   />
@@ -144,90 +170,96 @@ export default function NewPatientPage() {
                   {t.abha.lookup}
                 </Button>
               </div>
-              {lookupVerified !== null && (
-                <div className="flex items-center gap-2 text-xs">
-                  <Badge tone={lookupVerified ? "success" : "warning"}>
-                    <BadgeCheck className="h-3 w-3" aria-hidden />
-                    {lookupVerified ? t.abha.verified : t.abha.unverified}
-                  </Badge>
-                  <span className="text-muted">{t.abha.prefilled}</span>
-                </div>
-              )}
-              {lookupError && (
-                <p className="text-xs text-danger">{lookupError}</p>
-              )}
+              <div aria-live="polite" className="empty:hidden">
+                {lookupVerified !== null && (
+                  <div className="flex animate-rise-in flex-wrap items-center gap-2 text-xs">
+                    <Badge tone={lookupVerified ? "success" : "warning"}>
+                      <BadgeCheck className="h-3 w-3" aria-hidden />
+                      {lookupVerified ? t.abha.verified : t.abha.unverified}
+                    </Badge>
+                    <span className="text-muted">{t.abha.prefilled}</span>
+                  </div>
+                )}
+                {lookupError && (
+                  <p role="alert" className="text-xs font-medium text-danger">
+                    {lookupError}
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
+          {/* Identity */}
           <Card>
             <CardHeader>
               <CardTitle>{t.newPatient.detailsTitle}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  name="fullName"
-                  label={t.newPatient.fullName}
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
+            <CardContent className="flex flex-col gap-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Input
+                    name="fullName"
+                    label={t.newPatient.fullName}
+                    required
+                    autoComplete="off"
+                    error={nameError}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </div>
                 <Input
                   name="age"
                   label={t.newPatient.age}
                   type="number"
+                  inputMode="numeric"
                   min={0}
                   max={130}
+                  error={ageError}
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
                 />
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="sex" className="text-sm font-medium">
-                    {t.newPatient.sex}
-                  </label>
-                  <select
-                    id="sex"
-                    name="sex"
-                    className="h-10 rounded-md border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    value={sex}
-                    onChange={(e) => setSex(e.target.value as Sex)}
-                  >
-                    <option value="M">{t.newPatient.male}</option>
-                    <option value="F">{t.newPatient.female}</option>
-                    <option value="O">{t.newPatient.other}</option>
-                  </select>
-                </div>
+                <SelectField
+                  id="sex"
+                  name="sex"
+                  label={t.newPatient.sex}
+                  value={sex}
+                  onChange={(e) => setSex(e.target.value as Sex)}
+                >
+                  <option value="M">{t.newPatient.male}</option>
+                  <option value="F">{t.newPatient.female}</option>
+                  <option value="O">{t.newPatient.other}</option>
+                </SelectField>
                 <Input
                   name="phone"
                   label={t.newPatient.phone}
                   type="tel"
+                  inputMode="tel"
+                  autoComplete="off"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                 />
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="lang" className="text-sm font-medium">
-                    {t.newPatient.preferredLanguage}
-                  </label>
-                  <select
-                    id="lang"
-                    name="lang"
-                    className="h-10 rounded-md border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    value={lang}
-                    onChange={(e) => setLang(e.target.value)}
-                  >
-                    {locales.map((l) => (
-                      <option key={l} value={l}>
-                        {localeNames[l]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <SelectField
+                  id="lang"
+                  name="lang"
+                  label={t.newPatient.preferredLanguage}
+                  value={lang}
+                  onChange={(e) => setLang(e.target.value)}
+                >
+                  {locales.map((l) => (
+                    <option key={l} value={l}>
+                      {localeNames[l]}
+                    </option>
+                  ))}
+                </SelectField>
               </div>
 
               {/* Reason for visit / intake note with voice capture */}
-              <div className="mt-4 flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 border-t border-border pt-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label htmlFor="note" className="text-sm font-medium">
+                  <label
+                    htmlFor="note"
+                    className="text-xs font-semibold text-foreground-subtle"
+                  >
                     {t.newPatient.note}
                   </label>
                   <VoiceCapture
@@ -237,43 +269,77 @@ export default function NewPatientPage() {
                     }
                   />
                 </div>
-                <textarea
+                <Textarea
                   id="note"
                   name="note"
                   rows={3}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder={t.newPatient.notePlaceholder}
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
                 />
               </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Review + submit */}
         <div className="lg:col-span-1">
           <Card className="lg:sticky lg:top-20">
             <CardHeader>
               <CardTitle>{t.newPatient.summaryTitle}</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3 text-sm">
-              <p className="text-xs leading-relaxed text-muted">
+            <CardContent className="flex flex-col gap-4">
+              <dl className="flex flex-col divide-y divide-border text-sm">
+                <ReviewRow
+                  label={t.newPatient.fullName}
+                  value={fullName.trim()}
+                />
+                <ReviewRow label={t.newPatient.age} value={age.trim()} />
+                <ReviewRow
+                  label={t.newPatient.sex}
+                  value={
+                    sex === "M"
+                      ? t.newPatient.male
+                      : sex === "F"
+                        ? t.newPatient.female
+                        : t.newPatient.other
+                  }
+                />
+                <ReviewRow label={t.newPatient.abhaId} value={abhaId.trim()} />
+                <ReviewRow
+                  label={t.newPatient.preferredLanguage}
+                  value={
+                    localeNames[lang as keyof typeof localeNames] ?? lang
+                  }
+                />
+              </dl>
+
+              <p className="text-xs leading-relaxed text-muted text-pretty">
                 {t.newPatient.verifyNote}
               </p>
-              {error && (
-                <p
-                  role="alert"
-                  className="rounded-md border border-danger/30 bg-danger-surface px-3 py-2 text-sm text-danger"
-                >
-                  {error}
-                </p>
-              )}
+
+              <div aria-live="polite" className="empty:hidden">
+                {error && (
+                  <p
+                    role="alert"
+                    className="rounded-md border border-danger/35 bg-danger-surface px-3 py-2 text-sm font-medium text-danger"
+                  >
+                    {error}
+                  </p>
+                )}
+              </div>
+
               <Button
                 type="submit"
                 size="lg"
-                className="mt-2 w-full"
+                className="w-full"
                 disabled={submitting}
               >
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <UserPlus className="h-4 w-4" aria-hidden />
+                )}
                 {submitting ? t.newPatient.creating : t.newPatient.create}
               </Button>
             </CardContent>
@@ -281,5 +347,23 @@ export default function NewPatientPage() {
         </div>
       </form>
     </RequireRole>
+  );
+}
+
+/** One line of the live review panel; empty values read as an em dash. */
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-1.5 first:pt-0">
+      <dt className="shrink-0 text-xs text-muted">{label}</dt>
+      <dd
+        className={
+          value
+            ? "min-w-0 truncate text-right text-sm font-medium text-foreground"
+            : "text-sm text-muted"
+        }
+      >
+        {value || "—"}
+      </dd>
+    </div>
   );
 }

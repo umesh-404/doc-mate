@@ -3,6 +3,8 @@
 import { FileImage, FileText, ScanLine, UploadCloud, X } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
+import { useI18n } from "@/lib/i18n";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
 
 export interface StagedFile {
@@ -26,12 +28,12 @@ function classify(file: File): StagedFile["kind"] {
 
 const kindMeta: Record<
   StagedFile["kind"],
-  { label: string; icon: React.ReactNode }
+  { labelKey: keyof Dictionary["upload"]; icon: React.ReactNode }
 > = {
-  photo: { label: "Document photo", icon: <FileImage className="h-4 w-4" /> },
-  pdf: { label: "Lab PDF", icon: <FileText className="h-4 w-4" /> },
-  scan: { label: "Scan film", icon: <ScanLine className="h-4 w-4" /> },
-  other: { label: "Other", icon: <FileText className="h-4 w-4" /> },
+  photo: { labelKey: "kindPhoto", icon: <FileImage className="h-4 w-4" /> },
+  pdf: { labelKey: "kindPdf", icon: <FileText className="h-4 w-4" /> },
+  scan: { labelKey: "kindScan", icon: <ScanLine className="h-4 w-4" /> },
+  other: { labelKey: "kindOther", icon: <FileText className="h-4 w-4" /> },
 };
 
 function formatSize(bytes: number): string {
@@ -60,8 +62,12 @@ export function UploadDropzone({
   onUpload?: (files: File[]) => void;
   busy?: boolean;
 }) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  // Nested dragenter/dragleave fire constantly; count them so the active
+  // state doesn't flicker as the pointer crosses child elements.
+  const dragDepth = useRef(0);
   const staged = useMemo(() => files ?? [], [files]);
 
   const addFiles = useCallback(
@@ -84,14 +90,15 @@ export function UploadDropzone({
     [staged, onChange, onUpload],
   );
 
-  const remove = (id: string) =>
-    onChange?.(staged.filter((f) => f.id !== id));
+  const remove = (id: string) => onChange?.(staged.filter((f) => f.id !== id));
 
   return (
     <div className="flex flex-col gap-3">
       <div
         role="button"
         tabIndex={0}
+        aria-label={t.upload.dropTitle}
+        aria-disabled={busy || undefined}
         onClick={() => inputRef.current?.click()}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -99,29 +106,49 @@ export function UploadDropzone({
             inputRef.current?.click();
           }
         }}
-        onDragOver={(e) => {
+        onDragEnter={(e) => {
           e.preventDefault();
+          dragDepth.current += 1;
           setDragging(true);
         }}
-        onDragLeave={() => setDragging(false)}
+        onDragOver={(e) => e.preventDefault()}
+        onDragLeave={() => {
+          dragDepth.current = Math.max(0, dragDepth.current - 1);
+          if (dragDepth.current === 0) setDragging(false);
+        }}
         onDrop={(e) => {
           e.preventDefault();
+          dragDepth.current = 0;
           setDragging(false);
           addFiles(e.dataTransfer.files);
         }}
         className={cn(
-          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors",
+          "flex cursor-pointer select-none flex-col items-center justify-center gap-2 rounded-lg",
+          "border-2 border-dashed px-5 py-9 text-center",
+          "transition-[border-color,background-color,transform] duration-150 ease-clinical",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           dragging
-            ? "border-accent bg-primary/5"
-            : "border-border bg-surface-muted/40 hover:border-accent/50",
+            ? "scale-[1.01] border-accent bg-primary/10"
+            : "border-control-border/70 bg-surface-muted/40 hover:border-accent/70 hover:bg-surface-muted/70",
+          busy && "pointer-events-none opacity-60",
         )}
       >
-        <UploadCloud className="h-8 w-8 text-muted" aria-hidden />
-        <p className="text-sm font-medium text-foreground">
-          Drag &amp; drop files, or click to browse
+        <span
+          className={cn(
+            "flex h-11 w-11 items-center justify-center rounded-full border transition-colors",
+            dragging
+              ? "border-accent/40 bg-primary/15 text-primary"
+              : "border-border bg-surface text-muted",
+          )}
+          aria-hidden
+        >
+          <UploadCloud className="h-5 w-5" />
+        </span>
+        <p className="text-sm font-semibold text-foreground">
+          {dragging ? t.upload.dropActive : t.upload.dropTitle}
         </p>
-        <p className="text-xs text-muted">
-          Document photos, lab PDFs, scan films (X-ray / MRI / CT), DICOM
+        <p className="max-w-xs text-xs leading-relaxed text-muted text-pretty">
+          {t.upload.dropHint}
         </p>
         <input
           ref={inputRef}
@@ -129,7 +156,8 @@ export function UploadDropzone({
           multiple
           disabled={busy}
           accept="image/*,application/pdf,.dcm"
-          className="hidden"
+          className="sr-only"
+          tabIndex={-1}
           onChange={(e) => {
             addFiles(e.target.files);
             e.target.value = "";
@@ -142,28 +170,32 @@ export function UploadDropzone({
           {staged.map((f) => (
             <li
               key={f.id}
-              className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 py-2"
+              className="flex animate-rise-in items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 py-2 shadow-card"
             >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="text-muted" aria-hidden>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="shrink-0 text-muted" aria-hidden>
                   {kindMeta[f.kind].icon}
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">
                     {f.file.name}
                   </p>
-                  <p className="text-xs text-muted">{formatSize(f.file.size)}</p>
+                  <p className="text-xs tabular-nums text-muted">
+                    {formatSize(f.file.size)}
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge tone="neutral">{kindMeta[f.kind].label}</Badge>
+              <div className="flex shrink-0 items-center gap-2">
+                <Badge tone="neutral" className="hidden sm:inline-flex">
+                  {t.upload[kindMeta[f.kind].labelKey]}
+                </Badge>
                 <button
                   type="button"
                   onClick={() => remove(f.id)}
-                  aria-label={`Remove ${f.file.name}`}
-                  className="rounded p-1 text-muted hover:bg-surface-muted hover:text-danger"
+                  aria-label={`${t.upload.remove} ${f.file.name}`}
+                  className="rounded p-1.5 text-muted transition-colors hover:bg-danger-surface hover:text-danger"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4" aria-hidden />
                 </button>
               </div>
             </li>

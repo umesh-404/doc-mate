@@ -11,16 +11,16 @@ export default function ReceptionPatientsPage() {
   const { t } = useI18n();
   return (
     <RequireRole role="reception">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             {t.nav.patients}
           </h1>
-          <p className="text-sm text-muted">
+          <p className="mt-1 text-sm text-muted text-pretty">
             {t.patients.subtitleReception}
           </p>
         </div>
-        <Link href="/reception/patients/new">
+        <Link href="/reception/patients/new" className="shrink-0">
           <Button>
             <UserPlus className="h-4 w-4" aria-hidden />
             {t.nav.newPatient}

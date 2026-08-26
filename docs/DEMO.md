@@ -178,6 +178,69 @@ providers drop in behind the same interface via one env var.
 
 ---
 
+## 7b. Background cohort (surveillance + triage demo data)
+
+The five showcase patients above are the *story*. Two features, though, are
+**population** features and cannot be shown on a five-row database:
+
+- **Public-health surveillance** applies k-anonymity at **K=5**. With five
+  patients every bucket falls below the threshold, so the dashboard renders
+  entirely suppressed and the outbreak trip-wire can never fire — it refuses,
+  by design, to signal on a cell it would have to suppress.
+- **The OPD triage queue.** A real government OPD sees 500–2000 patients a day.
+  Five rows, all routine, does not look like one.
+
+So there is a second, optional seeder that adds a realistic *background*
+population. Run it from `backend/`, after migrations, **in addition to**
+`scripts.seed_demo` (it does not replace it):
+
+```bash
+alembic upgrade head
+python -m scripts.seed_demo      # the 5 showcase patients
+python -m scripts.seed_cohort    # + ~100 background patients
+python -m scripts.seed_cohort 250   # optional size override
+```
+
+What it adds (default size, verified numbers):
+
+- **100 synthetic patients**, varied Indian regions, ages 2–86, language mix
+  **en 55 / hi 30 / ta 15**.
+- **134 documents** — mostly `verified`, some `extracted`, a few `failed` with a
+  plain reason, so the data-quality panel reports honest numbers instead of a
+  suspiciously perfect 100%.
+- **313 clinical items**, every one linked to its source document.
+- A condition spread that clears K=5 and maps to real bundled ICD-11 codes:
+  hypertension ×24, type 2 diabetes ×22, dengue ×18, iron-deficiency anaemia
+  ×14, gastroenteritis ×12, asthma ×11, tuberculosis ×7.
+- Dates spread across roughly the **last six months**, with one deliberately
+  engineered **dengue cluster in the current week** (baseline ≈0.14 cases/week
+  → 15 this week) so `/surveillance/signals` fires a single **`alert`**. Every
+  other condition is kept flat, so exactly the intended signal appears.
+- A believable triage mix: **4 emergency, 20 urgent, 81 routine**.
+
+Deliberately **not** created: chunks/embeddings and summaries. These are
+background population for the aggregate views, not snapshot showcases — skipping
+them keeps the seed to a few seconds. Opening a cohort patient in the doctor UI
+generates their snapshot on demand like any other patient.
+
+**Deterministic and idempotent.** `random` is seeded with a fixed constant, so
+every run produces the same cohort — the outbreak lands on the same counts each
+time you rehearse. Patients are keyed by a cohort-only ABHA prefix (`90-…`),
+disjoint from the showcase ids, so re-running skips what already exists, never
+duplicates a row, and **never touches Rukmini, Arjun, Meena, Karthik or
+Lakshmi**.
+
+**Reset:** just re-run both seeders — they are both idempotent, so it is safe any
+time. For a truly clean slate, drop and recreate the database, `alembic upgrade
+head`, then run `scripts.seed_demo` followed by `scripts.seed_cohort`.
+
+> Say this if a judge asks: *"The five patients are the demo. The hundred behind
+> them are synthetic background population — that's what makes the anonymised
+> surveillance view legal to show at all, because k-anonymity suppresses
+> anything under five."*
+
+---
+
 ## 8. One-line close
 
 *"Five-minute consult. Under one minute to understand the patient. Every line

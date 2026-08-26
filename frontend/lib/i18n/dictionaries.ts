@@ -88,6 +88,8 @@ export type Dictionary = {
     createError: string;
     note: string;
     notePlaceholder: string;
+    nameRequired: string;
+    ageInvalid: string;
   };
   abha: {
     title: string;
@@ -182,6 +184,50 @@ export type Dictionary = {
     plainError: string;
     exportFhir: string;
     exportPdf: string;
+    /** Sticky sub-header / section navigation. */
+    jumpToSection: string;
+    backToTop: string;
+  };
+  /** Document ingestion status labels. */
+  docStatus: {
+    uploaded: string;
+    processing: string;
+    extracted: string;
+    verified: string;
+    failed: string;
+  };
+  /** Upload dropzone. */
+  upload: {
+    dropTitle: string;
+    dropHint: string;
+    dropActive: string;
+    remove: string;
+    kindPhoto: string;
+    kindPdf: string;
+    kindScan: string;
+    kindOther: string;
+  };
+  /** Appearance / dark mode. */
+  theme: {
+    label: string;
+    light: string;
+    dark: string;
+    system: string;
+  };
+  /** Keyboard shortcuts overlay. */
+  shortcuts: {
+    title: string;
+    hint: string;
+    open: string;
+    close: string;
+    search: string;
+    nextSection: string;
+    prevSection: string;
+    print: string;
+    plain: string;
+    theme: string;
+    help: string;
+    note: string;
   };
 };
 
@@ -257,6 +303,8 @@ const en: Dictionary = {
     createError: "Couldn't create the patient.",
     note: "Reason for visit / note",
     notePlaceholder: "Chief complaint, or dictate with the mic…",
+    nameRequired: "Full name is required.",
+    ageInvalid: "Enter an age between 0 and 130.",
   },
   abha: {
     title: "ABHA lookup",
@@ -354,6 +402,45 @@ const en: Dictionary = {
     plainError: "Couldn't load the plain-language summary.",
     exportFhir: "Export FHIR",
     exportPdf: "Export PDF / Print",
+    jumpToSection: "Jump to section",
+    backToTop: "Back to top",
+  },
+  docStatus: {
+    uploaded: "Uploaded",
+    processing: "Processing",
+    extracted: "Extracted",
+    verified: "Verified",
+    failed: "Failed",
+  },
+  upload: {
+    dropTitle: "Drag & drop files, or click to browse",
+    dropHint: "Document photos, lab PDFs, scan films (X-ray / MRI / CT), DICOM",
+    dropActive: "Release to add these files",
+    remove: "Remove",
+    kindPhoto: "Document photo",
+    kindPdf: "Lab PDF",
+    kindScan: "Scan film",
+    kindOther: "Other",
+  },
+  theme: {
+    label: "Appearance",
+    light: "Light",
+    dark: "Dark",
+    system: "System",
+  },
+  shortcuts: {
+    title: "Keyboard shortcuts",
+    hint: "Shortcuts",
+    open: "Show keyboard shortcuts",
+    close: "Close",
+    search: "Focus search",
+    nextSection: "Next section",
+    prevSection: "Previous section",
+    print: "Print / export PDF",
+    plain: "Toggle patient-friendly summary",
+    theme: "Switch light / dark",
+    help: "Show this help",
+    note: "Shortcuts are ignored while you are typing in a field.",
   },
 };
 
@@ -429,6 +516,8 @@ const hi: Dictionary = {
     createError: "मरीज़ नहीं बनाया जा सका।",
     note: "आने का कारण / नोट",
     notePlaceholder: "मुख्य शिकायत, या माइक से बोलें…",
+    nameRequired: "पूरा नाम आवश्यक है।",
+    ageInvalid: "0 से 130 के बीच आयु दर्ज करें।",
   },
   abha: {
     title: "ABHA खोज",
@@ -526,6 +615,45 @@ const hi: Dictionary = {
     plainError: "सरल-भाषा सारांश लोड नहीं हो सका।",
     exportFhir: "FHIR निर्यात",
     exportPdf: "PDF निर्यात / प्रिंट",
+    jumpToSection: "अनुभाग पर जाएँ",
+    backToTop: "ऊपर जाएँ",
+  },
+  docStatus: {
+    uploaded: "अपलोड हुआ",
+    processing: "प्रोसेस हो रहा है",
+    extracted: "निकाला गया",
+    verified: "सत्यापित",
+    failed: "विफल",
+  },
+  upload: {
+    dropTitle: "फ़ाइलें खींचकर छोड़ें, या चुनने के लिए क्लिक करें",
+    dropHint: "दस्तावेज़ फ़ोटो, लैब PDF, स्कैन फ़िल्म (X-ray / MRI / CT), DICOM",
+    dropActive: "फ़ाइलें जोड़ने के लिए छोड़ें",
+    remove: "हटाएँ",
+    kindPhoto: "दस्तावेज़ फ़ोटो",
+    kindPdf: "लैब PDF",
+    kindScan: "स्कैन फ़िल्म",
+    kindOther: "अन्य",
+  },
+  theme: {
+    label: "रूप",
+    light: "उजला",
+    dark: "गहरा",
+    system: "सिस्टम",
+  },
+  shortcuts: {
+    title: "कीबोर्ड शॉर्टकट",
+    hint: "शॉर्टकट",
+    open: "कीबोर्ड शॉर्टकट देखें",
+    close: "बंद करें",
+    search: "खोज पर जाएँ",
+    nextSection: "अगला अनुभाग",
+    prevSection: "पिछला अनुभाग",
+    print: "प्रिंट / PDF निर्यात",
+    plain: "रोगी-अनुकूल सारांश दिखाएँ/छिपाएँ",
+    theme: "उजला / गहरा बदलें",
+    help: "यह सहायता दिखाएँ",
+    note: "फ़ील्ड में टाइप करते समय शॉर्टकट काम नहीं करते।",
   },
 };
 
@@ -601,6 +729,8 @@ const ta: Dictionary = {
     createError: "நோயாளரை உருவாக்க முடியவில்லை.",
     note: "வருகையின் காரணம் / குறிப்பு",
     notePlaceholder: "முதன்மை புகார், அல்லது மைக் மூலம் பேசவும்…",
+    nameRequired: "முழுப் பெயர் தேவை.",
+    ageInvalid: "0 முதல் 130 வரை வயதை உள்ளிடவும்.",
   },
   abha: {
     title: "ABHA தேடல்",
@@ -698,6 +828,45 @@ const ta: Dictionary = {
     plainError: "எளிய மொழி சுருக்கத்தை ஏற்ற முடியவில்லை.",
     exportFhir: "FHIR ஏற்றுமதி",
     exportPdf: "PDF ஏற்றுமதி / அச்சிடு",
+    jumpToSection: "பிரிவுக்குச் செல்",
+    backToTop: "மேலே செல்",
+  },
+  docStatus: {
+    uploaded: "பதிவேற்றப்பட்டது",
+    processing: "செயலாக்கத்தில்",
+    extracted: "பிரித்தெடுக்கப்பட்டது",
+    verified: "சரிபார்க்கப்பட்டது",
+    failed: "தோல்வி",
+  },
+  upload: {
+    dropTitle: "கோப்புகளை இழுத்துவிடவும், அல்லது கிளிக் செய்யவும்",
+    dropHint: "ஆவணப் புகைப்படங்கள், ஆய்வக PDF, ஸ்கேன் படங்கள் (X-ray / MRI / CT), DICOM",
+    dropActive: "கோப்புகளைச் சேர்க்க விடுங்கள்",
+    remove: "நீக்கு",
+    kindPhoto: "ஆவணப் புகைப்படம்",
+    kindPdf: "ஆய்வக PDF",
+    kindScan: "ஸ்கேன் படம்",
+    kindOther: "மற்றவை",
+  },
+  theme: {
+    label: "தோற்றம்",
+    light: "வெளிர்",
+    dark: "இருள்",
+    system: "கணினி",
+  },
+  shortcuts: {
+    title: "விசைப்பலகை குறுக்குவழிகள்",
+    hint: "குறுக்குவழிகள்",
+    open: "விசைப்பலகை குறுக்குவழிகளைக் காட்டு",
+    close: "மூடு",
+    search: "தேடலுக்குச் செல்",
+    nextSection: "அடுத்த பிரிவு",
+    prevSection: "முந்தைய பிரிவு",
+    print: "அச்சிடு / PDF ஏற்றுமதி",
+    plain: "நோயாளர் நட்பு சுருக்கத்தை மாற்று",
+    theme: "வெளிர் / இருள் மாற்று",
+    help: "இந்த உதவியைக் காட்டு",
+    note: "புலத்தில் தட்டச்சு செய்யும்போது குறுக்குவழிகள் செயல்படாது.",
   },
 };
 

@@ -3,32 +3,106 @@
 @tailwind utilities;
 
 /*
- * Doc-mate clinical design system.
- * Calm, high-contrast, fast to read. Light theme only for the clinical
- * workspace (dark mode is a roadmap item). Colors are HSL channels so
- * Tailwind's <alpha-value> modifier works.
+ * ============================================================================
+ * Doc-mate clinical design system
+ * ============================================================================
+ * Calm, high-contrast, fast to read — a medical-device console, not a
+ * consumer app. Every colour is an HSL channel triple so Tailwind's
+ * `<alpha-value>` modifier works (`bg-danger/10`).
+ *
+ * Theming strategy: light is the base `:root` palette; dark overrides the same
+ * variables under `.dark` (class strategy, set on <html> by lib/theme.tsx).
+ * No component should ever hardcode a hex value — always go through a token.
  */
+
 :root {
+  color-scheme: light;
+
+  /* --- Surfaces & text -------------------------------------------------- */
   --bg: 210 40% 98%;
+  --bg-accent: 205 50% 96%;
   --surface: 0 0% 100%;
-  --surface-muted: 210 40% 96%;
-  --border: 214 32% 91%;
-  --foreground: 217 33% 17%;
-  --muted: 215 16% 47%;
+  --surface-muted: 210 40% 96.5%;
+  --surface-raised: 0 0% 100%;
+  --border: 214 30% 89%;
+  --border-strong: 214 26% 80%;
+  /* Boundary for interactive controls (inputs, checkboxes). Held at ≥3:1
+     against the surface so the control itself is perceivable — WCAG 1.4.11. */
+  --control-border: 214 18% 58%;
+  --foreground: 217 38% 15%;
+  --foreground-subtle: 217 22% 32%;
+  --muted: 215 16% 44%;
 
-  --primary: 201 96% 32%;
+  /* --- Brand ------------------------------------------------------------ */
+  --primary: 201 96% 28%;
+  --primary-hover: 201 96% 23%;
   --primary-foreground: 0 0% 100%;
-  --accent: 199 89% 48%;
+  --accent: 199 89% 42%;
+  --ring: 199 89% 45%;
 
-  --danger: 0 72% 45%;
+  /* --- Semantic --------------------------------------------------------- */
+  --danger: 0 72% 42%;
+  --danger-strong: 0 74% 34%;
   --danger-surface: 0 86% 97%;
-  --warning: 32 81% 40%;
-  --warning-surface: 43 96% 95%;
-  --success: 152 60% 32%;
-  --success-surface: 152 60% 96%;
+  --danger-foreground: 0 0% 100%;
 
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --warning: 30 85% 33%;
+  --warning-strong: 28 88% 28%;
+  --warning-surface: 43 96% 94%;
+
+  --success: 152 58% 28%;
+  --success-surface: 152 52% 95%;
+
+  /* --- Elevation -------------------------------------------------------- */
+  --shadow-color: 215 30% 25%;
+  --shadow-strength: 1;
+
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
 }
+
+.dark {
+  color-scheme: dark;
+
+  /* Deep desaturated slate — easy on the eyes in a dim consult room.        */
+  --bg: 218 30% 8%;
+  --bg-accent: 216 32% 11%;
+  --surface: 216 28% 12%;
+  --surface-muted: 216 24% 17%;
+  --surface-raised: 216 26% 15%;
+  --border: 215 20% 24%;
+  --border-strong: 215 18% 34%;
+  --control-border: 215 15% 46%;
+  --foreground: 210 30% 96%;
+  --foreground-subtle: 213 20% 82%;
+  --muted: 215 16% 66%;
+
+  --primary: 199 88% 58%;
+  --primary-hover: 199 88% 66%;
+  --primary-foreground: 217 45% 10%;
+  --accent: 199 90% 62%;
+  --ring: 199 90% 62%;
+
+  /* Alarming, still legible: bright enough to read on dark, not neon.       */
+  --danger: 0 84% 68%;
+  --danger-strong: 0 88% 74%;
+  --danger-surface: 0 45% 16%;
+  --danger-foreground: 0 60% 8%;
+
+  --warning: 38 92% 64%;
+  --warning-strong: 40 95% 72%;
+  --warning-surface: 35 45% 15%;
+
+  --success: 152 55% 60%;
+  --success-surface: 155 35% 13%;
+
+  --shadow-color: 220 60% 2%;
+  --shadow-strength: 2.2;
+}
+
+/* ---------------------------------------------------------------------------
+ * Base
+ * ------------------------------------------------------------------------ */
 
 * {
   border-color: hsl(var(--border));
@@ -36,42 +110,264 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* Sticky sub-headers must not cover the section we scroll to. */
+  scroll-padding-top: 8.5rem;
 }
 
 body {
   background-color: hsl(var(--bg));
   color: hsl(var(--foreground));
   font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Consistent, visible focus for keyboard users */
+/*
+ * Indic scripts need more vertical room than Latin at the same font-size.
+ * Devanagari and Tamil glyphs carry ascenders/descenders that clip at the
+ * tight line-heights that look right for Inter, so relax them globally.
+ */
+:root:lang(hi),
+:root:lang(ta),
+[lang="hi"],
+[lang="ta"] {
+  line-height: 1.7;
+}
+
+[lang="hi"] .text-xs,
+[lang="ta"] .text-xs,
+[lang="hi"] .text-\[11px\],
+[lang="ta"] .text-\[11px\] {
+  line-height: 1.6;
+}
+
+/* Consistent, always-visible focus for keyboard users. */
 :focus-visible {
-  outline: 2px solid hsl(var(--accent));
+  outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Never show the ring for pointer interaction on already-styled controls. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.2);
+}
+
+/* Slim, themed scrollbars so overflow areas don't break the palette. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border-strong)) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border-strong));
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+ * Component utilities
+ * ------------------------------------------------------------------------ */
+
+@layer components {
+  /* Skeleton block: a calm shimmer that mirrors the final layout. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: hsl(var(--surface-muted));
+    border-radius: 0.5rem;
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--foreground) / 0.06),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+  }
+
+  /* Keyboard-shortcut key cap. */
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.375rem;
+    border-radius: 0.375rem;
+    border: 1px solid hsl(var(--border-strong));
+    border-bottom-width: 2px;
+    background-color: hsl(var(--surface-muted));
+    color: hsl(var(--foreground-subtle));
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    line-height: 1;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Hairline divider that respects the theme. */
+  .rule {
+    background-color: hsl(var(--border));
+  }
+
+  /* Staggered entry helper — set --i on children for a cascade. */
+  .stagger > * {
+    animation: rise-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Motion
+ * ------------------------------------------------------------------------ */
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes expand-down {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Reserved for critical clinical alerts only — a slow breath on the severity
+   rail, never on the text. Disabled under prefers-reduced-motion below. */
+@keyframes rail-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 /*
- * Print stylesheet for the doctor snapshot (Export PDF / Print).
- * Strip app chrome, flatten cards, and keep sections from breaking across
- * pages so the snapshot prints as a clean, compact handout.
+ * Accessibility: users who ask for reduced motion get no decorative movement.
+ * Opacity-only transitions are kept (they don't trigger vestibular issues) but
+ * everything that translates, scales, pulses or shimmers is switched off.
  */
-@media print {
-  header,
-  .print\:hidden {
-    display: none !important;
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .skeleton::after {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Print — the snapshot as a clean clinical handout
+ * ------------------------------------------------------------------------ */
+
+@media print {
+  /* Force the light palette regardless of the on-screen theme. */
+  :root,
+  .dark {
+    color-scheme: light;
+    --bg: 0 0% 100%;
+    --bg-accent: 0 0% 100%;
+    --surface: 0 0% 100%;
+    --surface-muted: 0 0% 100%;
+    --surface-raised: 0 0% 100%;
+    --border: 0 0% 72%;
+    --border-strong: 0 0% 48%;
+    --control-border: 0 0% 40%;
+    --foreground: 0 0% 0%;
+    --foreground-subtle: 0 0% 12%;
+    --muted: 0 0% 28%;
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 0 0% 20%;
+    --danger: 0 100% 30%;
+    --danger-surface: 0 0% 100%;
+    --warning: 30 100% 25%;
+    --warning-surface: 0 0% 100%;
+    --success: 150 100% 20%;
+    --success-surface: 0 0% 100%;
+  }
+
+  html,
   body {
     background: #fff !important;
+    color: #000 !important;
+    font-size: 10.5pt;
+  }
+
+  header,
+  nav,
+  [data-print-hide],
+  .print\:hidden {
+    display: none !important;
   }
 
   main {
@@ -80,18 +376,58 @@ body {
     margin: 0 !important;
   }
 
+  /* Flatten app chrome: no shadows, no fills, hairline rules only. */
   section,
-  .shadow-card {
+  article,
+  .shadow-card,
+  .shadow-card-lg,
+  .shadow-float {
     box-shadow: none !important;
+  }
+
+  section,
+  li,
+  tr,
+  figure,
+  .avoid-break {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Citations must survive the export — outline them so they read as chips. */
+  [data-citation] {
+    border: 1px solid #999 !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  /* Verification / ungrounded markers stay loud on paper. */
+  [data-verify-marker] {
+    border: 1px solid #000 !important;
+    color: #000 !important;
+    font-weight: 700 !important;
   }
 
   a[href]::after {
     content: "";
   }
 
+  /* No motion in a printed document. */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
   @page {
-    margin: 12mm;
+    margin: 14mm 12mm;
   }
 }
