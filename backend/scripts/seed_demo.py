@@ -67,6 +67,7 @@ from app.db.models import (
 from app.db.session import get_sessionmaker
 from app.ingestion.pipeline import _citation_label, chunk_text
 from app.llm import stub
+from app.safety.alerts import build_alerts
 
 TODAY = date.today()
 
@@ -932,6 +933,15 @@ def _seed_patient(session, spec: dict) -> None:
         }
 
     sections = _build_sections(ctx_items, complaint, spec.get("extra_flags", []))
+    # Compute the same citation-backed safety alerts the live pipeline produces,
+    # so the doctor snapshot's alerts banner is populated for seeded patients too.
+    # build_alerts expects `kind` as the string value (matching gather_context),
+    # so normalize any enum members before passing them in.
+    alert_ctx = [
+        {**it, "kind": getattr(it.get("kind"), "value", it.get("kind"))}
+        for it in ctx_items
+    ]
+    alerts = build_alerts(alert_ctx)
     session.add(
         Summary(
             patient_id=patient.id,
@@ -942,6 +952,7 @@ def _seed_patient(session, spec: dict) -> None:
                 "mode": "stub",
                 "source": "seed_demo",
                 "fact_count": len(ctx_items),
+                "alerts": alerts,
             },
         )
     )

@@ -58,3 +58,40 @@ body {
     text-wrap: balance;
   }
 }
+
+/*
+ * Print stylesheet for the doctor snapshot (Export PDF / Print).
+ * Strip app chrome, flatten cards, and keep sections from breaking across
+ * pages so the snapshot prints as a clean, compact handout.
+ */
+@media print {
+  header,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  section,
+  .shadow-card {
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: "";
+  }
+
+  @page {
+    margin: 12mm;
+  }
+}

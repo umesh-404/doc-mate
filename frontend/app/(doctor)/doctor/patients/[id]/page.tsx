@@ -5,17 +5,30 @@ import Link from "next/link";
 import { useState } from "react";
 import { RequireRole } from "@/components/RequireRole";
 import { PatientSnapshotView } from "@/components/snapshot/PatientSnapshotView";
+import { PlainLanguagePanel } from "@/components/snapshot/PlainLanguagePanel";
+import { SnapshotToolbar, SUMMARY_LANGS } from "@/components/snapshot/SnapshotToolbar";
 import { SummaryView } from "@/components/snapshot/SummaryView";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { ErrorState, LoadingState } from "@/components/ui/States";
+import { api, ApiError, type SummaryLang } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { getMockSnapshot } from "@/lib/mock-data";
 import {
   useGenerateSummary,
+  useInteractions,
   usePatient,
+  usePatientCodes,
+  usePlainSummary,
   useSummary,
+  useTranslatedSummary,
 } from "@/lib/queries";
+
+function asSummaryLang(value: string | undefined): SummaryLang {
+  return (SUMMARY_LANGS as string[]).includes(value ?? "")
+    ? (value as SummaryLang)
+    : "en";
+}
 
 export default function PatientSnapshotPage({
   params,
@@ -27,21 +40,58 @@ export default function PatientSnapshotPage({
 
   const [polling, setPolling] = useState(false);
   const [showSample, setShowSample] = useState(false);
+  const [viewLang, setViewLang] = useState<SummaryLang | null>(null);
+  const [plainOpen, setPlainOpen] = useState(false);
+  const [exportingFhir, setExportingFhir] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const patient = usePatient(patientId);
   const summary = useSummary(patientId, polling);
   const generate = useGenerateSummary(patientId);
 
+  const baseSummary = summary.data ?? null;
+  const baseLang = asSummaryLang(baseSummary?.language);
+  const activeLang = viewLang ?? baseLang;
+  const needTranslate = !!baseSummary && activeLang !== baseLang;
+
+  // Ancillary contract-v2 data — only once a base summary exists.
+  const hasSummary = !!baseSummary;
+  const translated = useTranslatedSummary(patientId, activeLang, needTranslate);
+  const plain = usePlainSummary(patientId, activeLang, plainOpen && hasSummary);
+  const interactions = useInteractions(patientId, hasSummary);
+  const codes = usePatientCodes(patientId, hasSummary);
+
+  const displaySummary = needTranslate
+    ? (translated.data ?? baseSummary)
+    : baseSummary;
+
   function onGenerate() {
     generate.mutate(undefined, {
       onSuccess: () => {
-        // Poll until the summary is retrievable; the query stops itself once
-        // data lands (see the render-time guard below). Covers both the
-        // "generating" and immediately-"ready" responses.
         setPolling(true);
         void summary.refetch();
       },
     });
+  }
+
+  async function onExportFhir() {
+    setExportError(null);
+    setExportingFhir(true);
+    try {
+      const blob = await api.fhirBundleBlob(patientId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `patient-${patientId}-fhir-bundle.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof ApiError ? err.message : t.common.error);
+    } finally {
+      setExportingFhir(false);
+    }
   }
 
   // Stop polling once the summary lands.
@@ -51,7 +101,7 @@ export default function PatientSnapshotPage({
 
   return (
     <RequireRole role="doctor">
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-5 flex items-center justify-between gap-3 print:hidden">
         <Link
           href="/doctor/patients"
           className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
@@ -67,7 +117,6 @@ export default function PatientSnapshotPage({
   );
 
   function renderBody() {
-    // Patient identity is needed to render the snapshot header.
     if (patient.isError) {
       return (
         <ErrorState
@@ -95,15 +144,44 @@ export default function PatientSnapshotPage({
     }
 
     // Real summary available — the primary path.
-    if (summary.data && patient.data) {
-      return <SummaryView summary={summary.data} patient={patient.data} />;
+    if (displaySummary && patient.data) {
+      return (
+        <div className="flex flex-col gap-5">
+          <SnapshotToolbar
+            lang={activeLang}
+            onLang={setViewLang}
+            translating={needTranslate && translated.isFetching}
+            plainOpen={plainOpen}
+            onTogglePlain={() => setPlainOpen((v) => !v)}
+            onExportFhir={onExportFhir}
+            exportingFhir={exportingFhir}
+            onPrint={() => window.print()}
+          />
+          {exportError && (
+            <p className="rounded-md border border-danger/30 bg-danger-surface px-3 py-2 text-sm text-danger print:hidden">
+              {exportError}
+            </p>
+          )}
+          {plainOpen && (
+            <PlainLanguagePanel
+              plain={plain.data}
+              loading={plain.isLoading}
+              error={plain.isError}
+            />
+          )}
+          <SummaryView
+            summary={displaySummary}
+            patient={patient.data}
+            codes={codes.data}
+            interactions={interactions.data}
+          />
+        </div>
+      );
     }
 
     // Generation in progress.
     if (generating) {
-      return (
-        <LoadingState label={t.snapshot.generating} />
-      );
+      return <LoadingState label={t.snapshot.generating} />;
     }
 
     // No summary yet (404) — offer to generate, with an optional sample preview.
@@ -118,9 +196,7 @@ export default function PatientSnapshotPage({
               <h2 className="text-lg font-semibold text-foreground">
                 {t.snapshot.generateTitle}
               </h2>
-              <p className="mt-1 text-sm text-muted">
-                {t.snapshot.generateBody}
-              </p>
+              <p className="mt-1 text-sm text-muted">{t.snapshot.generateBody}</p>
             </div>
             <Button size="lg" onClick={onGenerate} disabled={generate.isPending}>
               {generate.isPending ? (

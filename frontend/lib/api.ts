@@ -7,14 +7,23 @@
  */
 
 import type {
+  AbhaLookupResult,
   ClinicalItem,
   DocumentDetail,
   DocumentSummary,
+  InteractionReport,
+  ItemCodes,
+  MedicalCode,
   NewPatient,
   Patient,
+  PlainSummary,
   Summary,
   SummaryGenerateResponse,
+  VoiceTranscription,
 } from "./types";
+
+/** Languages Doc-mate can translate the snapshot into. */
+export type SummaryLang = "en" | "hi" | "ta";
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
@@ -206,5 +215,79 @@ export const api = {
 
   getSummary(patientId: string): Promise<Summary> {
     return request<Summary>(`/patients/${patientId}/summary`);
+  },
+
+  /** Translated snapshot (same shape as getSummary) in the requested language. */
+  getTranslatedSummary(patientId: string, lang: SummaryLang): Promise<Summary> {
+    return request<Summary>(
+      `/patients/${patientId}/summary/translated?lang=${lang}`,
+    );
+  },
+
+  /** Patient-friendly plain-language narrative of the snapshot. */
+  getPlainSummary(patientId: string, lang: SummaryLang): Promise<PlainSummary> {
+    return request<PlainSummary>(
+      `/patients/${patientId}/summary/plain?lang=${lang}`,
+    );
+  },
+
+  /* ---- Contract v2: safety, coding, interoperability ---- */
+
+  /** Drug–drug interactions and allergy conflicts for the patient's meds. */
+  getInteractions(patientId: string): Promise<InteractionReport> {
+    return request<InteractionReport>(`/patients/${patientId}/interactions`);
+  },
+
+  /** ICD-11 / NAMASTE codes mapped to the patient's clinical items. */
+  getPatientCodes(patientId: string): Promise<ItemCodes[]> {
+    return request<ItemCodes[]>(`/patients/${patientId}/codes`);
+  },
+
+  /** Free-text search over a coding system. */
+  searchCoding(term: string, system: "icd11" | "namaste"): Promise<MedicalCode[]> {
+    return request<MedicalCode[]>(
+      `/coding/search?term=${encodeURIComponent(term)}&system=${system}`,
+    );
+  },
+
+  /** Demo ABHA directory lookup — pre-fills the new-patient form. */
+  abhaLookup(abhaId: string): Promise<AbhaLookupResult> {
+    return request<AbhaLookupResult>(
+      `/abha/lookup?abha_id=${encodeURIComponent(abhaId)}`,
+    );
+  },
+
+  /** Transcribe a recorded/uploaded audio clip for the intake note. */
+  transcribeVoice(audio: Blob, lang?: string): Promise<VoiceTranscription> {
+    const form = new FormData();
+    const filename =
+      audio instanceof File ? audio.name : "recording.webm";
+    form.set("audio", audio, filename);
+    if (lang) form.set("lang", lang);
+    return request<VoiceTranscription>("/voice/transcribe", {
+      method: "POST",
+      body: form,
+    });
+  },
+
+  /**
+   * Download the patient's FHIR R4 Bundle as a Blob. Uses fetch directly (not
+   * the JSON request helper) so the raw body can be saved to a file.
+   */
+  async fhirBundleBlob(patientId: string): Promise<Blob> {
+    const finalHeaders = new Headers();
+    const token = getToken();
+    if (token) finalHeaders.set("Authorization", `Bearer ${token}`);
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL}/patients/${patientId}/fhir`, {
+        method: "GET",
+        headers: finalHeaders,
+      });
+    } catch {
+      throw new ApiError(0, "Network error — is the backend running?");
+    }
+    if (!res.ok) throw new ApiError(res.status, res.statusText);
+    return res.blob();
   },
 };

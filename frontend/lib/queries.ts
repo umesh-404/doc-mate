@@ -15,14 +15,17 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { ApiError, api } from "./api";
+import { ApiError, api, type SummaryLang } from "./api";
 import {
   IN_FLIGHT_STATUSES,
   type ClinicalItem,
   type DocumentDetail,
   type DocumentSummary,
+  type InteractionReport,
+  type ItemCodes,
   type NewPatient,
   type Patient,
+  type PlainSummary,
   type Summary,
 } from "./types";
 
@@ -34,6 +37,12 @@ export const qk = {
   documents: (patientId: string) => ["documents", patientId] as const,
   document: (id: string) => ["document", id] as const,
   summary: (patientId: string) => ["summary", patientId] as const,
+  summaryTranslated: (patientId: string, lang: string) =>
+    ["summary", patientId, "translated", lang] as const,
+  summaryPlain: (patientId: string, lang: string) =>
+    ["summary", patientId, "plain", lang] as const,
+  interactions: (patientId: string) => ["interactions", patientId] as const,
+  codes: (patientId: string) => ["codes", patientId] as const,
 };
 
 /* ---- Patients ---- */
@@ -164,6 +173,95 @@ export function useGenerateSummary(patientId: string) {
     mutationFn: () => api.generateSummary(patientId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.summary(patientId) });
+    },
+  });
+}
+
+/**
+ * Fetch the snapshot translated into `lang`. Only enabled once a base summary
+ * exists and a non-default language is selected; the base query already covers
+ * the patient's default language.
+ */
+export function useTranslatedSummary(
+  patientId: string,
+  lang: SummaryLang,
+  enabled: boolean,
+): UseQueryResult<Summary | null, ApiError> {
+  return useQuery({
+    queryKey: qk.summaryTranslated(patientId, lang),
+    enabled: enabled && !!patientId,
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await api.getTranslatedSummary(patientId, lang);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
+      }
+    },
+  });
+}
+
+/** Patient-friendly plain-language narrative, fetched on demand. */
+export function usePlainSummary(
+  patientId: string,
+  lang: SummaryLang,
+  enabled: boolean,
+): UseQueryResult<PlainSummary | null, ApiError> {
+  return useQuery({
+    queryKey: qk.summaryPlain(patientId, lang),
+    enabled: enabled && !!patientId,
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await api.getPlainSummary(patientId, lang);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
+      }
+    },
+  });
+}
+
+/**
+ * Drug-interaction / allergy-conflict report. Surfaced as a verification aid;
+ * a missing report (404) is treated as "nothing to surface", not an error.
+ */
+export function useInteractions(
+  patientId: string,
+  enabled = true,
+): UseQueryResult<InteractionReport | null, ApiError> {
+  return useQuery({
+    queryKey: qk.interactions(patientId),
+    enabled: enabled && !!patientId,
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await api.getInteractions(patientId);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
+      }
+    },
+  });
+}
+
+/** ICD-11 / NAMASTE codes mapped to the patient's items. */
+export function usePatientCodes(
+  patientId: string,
+  enabled = true,
+): UseQueryResult<ItemCodes[] | null, ApiError> {
+  return useQuery({
+    queryKey: qk.codes(patientId),
+    enabled: enabled && !!patientId,
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await api.getPatientCodes(patientId);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
+      }
     },
   });
 }

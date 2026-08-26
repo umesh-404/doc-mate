@@ -32,6 +32,8 @@ export interface NewPatient {
   abha_id?: string;
   preferred_language?: string;
   phone?: string;
+  /** Free-text reason-for-visit / intake note (may be voice-transcribed). */
+  note?: string;
 }
 
 /* ---- Documents ---- */
@@ -98,6 +100,10 @@ export interface SummaryItem {
   confidence?: number | null;
   verified?: boolean | null;
   citations: SummaryCitation[];
+  /** Contract v2: whether this line is supported by a retrieved source. */
+  grounded?: boolean | null;
+  /** Contract v2: short note explaining an ungrounded/uncertain line. */
+  grounding_note?: string | null;
 }
 
 export type SectionKey =
@@ -115,12 +121,108 @@ export interface SummarySection {
   items: SummaryItem[];
 }
 
+/** Contract v2: overall grounding score for the generated snapshot. */
+export interface Grounding {
+  score: number; // 0..1
+  method: string;
+  unsupported_count: number;
+}
+
+export type AlertLevel = "critical" | "warning" | "info";
+export type AlertKind =
+  | "allergy"
+  | "interaction"
+  | "abnormal_lab"
+  | "missing_data";
+
+/** Contract v2: a surfaced alert the doctor should verify (never a directive). */
+export interface SummaryAlert {
+  level: AlertLevel;
+  kind: AlertKind;
+  text: string;
+  citations: SummaryCitation[];
+}
+
 export interface Summary {
   id: string;
   patient_id: string;
   language: string;
   generated_at: string;
   sections: SummarySection[];
+  /** Contract v2 additions (optional so v1 responses still type-check). */
+  grounding?: Grounding | null;
+  alerts?: SummaryAlert[] | null;
+}
+
+/* ---- Drug interactions (contract v2) ---- */
+
+export type InteractionSeverity =
+  | "contraindicated"
+  | "major"
+  | "moderate"
+  | "minor";
+
+export interface DrugInteraction {
+  drug_a: string;
+  drug_b: string;
+  severity: InteractionSeverity;
+  description: string;
+  source: string;
+}
+
+export interface AllergyConflict {
+  medication: string;
+  allergen: string;
+  note: string;
+  source: string;
+}
+
+export interface InteractionReport {
+  checked_at: string;
+  medications: { name: string; rxcui?: string | null }[];
+  interactions: DrugInteraction[];
+  allergy_conflicts: AllergyConflict[];
+}
+
+/* ---- Coding (ICD-11 / NAMASTE) (contract v2) ---- */
+
+export interface MedicalCode {
+  system: string;
+  code: string;
+  display: string;
+}
+
+export interface ItemCodes {
+  item_label: string;
+  kind: string;
+  codes: MedicalCode[];
+}
+
+/* ---- ABHA lookup (contract v2, demo/mock) ---- */
+
+export interface AbhaLookupResult {
+  abha_id: string;
+  name: string;
+  gender: string;
+  year_of_birth: number;
+  verified: boolean;
+  source: string;
+}
+
+/* ---- Plain-language summary (contract v2) ---- */
+
+export interface PlainSummary {
+  language: string;
+  text: string;
+}
+
+/* ---- Voice transcription (contract v2) ---- */
+
+export interface VoiceTranscription {
+  text: string;
+  lang: string;
+  confidence: number;
+  stub: boolean;
 }
 
 export interface SummaryGenerateResponse {

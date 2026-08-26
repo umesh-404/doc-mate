@@ -86,6 +86,29 @@ export type Dictionary = {
     create: string;
     creating: string;
     createError: string;
+    note: string;
+    notePlaceholder: string;
+  };
+  abha: {
+    title: string;
+    hint: string;
+    placeholder: string;
+    lookup: string;
+    verified: string;
+    unverified: string;
+    prefilled: string;
+    error: string;
+  };
+  voice: {
+    record: string;
+    stop: string;
+    recording: string;
+    transcribing: string;
+    uploadFallback: string;
+    stub: string;
+    noRecorder: string;
+    permissionDenied: string;
+    error: string;
   };
   docs: {
     title: string;
@@ -141,6 +164,24 @@ export type Dictionary = {
     sampleBanner: string;
     viewSample: string;
     hideSample: string;
+    grounded: string;
+    groundingMethod: string;
+    groundingUnsupported: string;
+    unverifiedBySource: string;
+    ungroundedTip: string;
+    alertsTitle: string;
+    medSafetyTitle: string;
+    medSafetyNone: string;
+    medSafetyVerify: string;
+    medSafetySource: string;
+    medSafetyAllergy: string;
+    medSafetyDisclaimer: string;
+    languageLabel: string;
+    plainToggle: string;
+    plainTitle: string;
+    plainError: string;
+    exportFhir: string;
+    exportPdf: string;
   };
 };
 
@@ -214,6 +255,29 @@ const en: Dictionary = {
     create: "Create patient",
     creating: "Creating…",
     createError: "Couldn't create the patient.",
+    note: "Reason for visit / note",
+    notePlaceholder: "Chief complaint, or dictate with the mic…",
+  },
+  abha: {
+    title: "ABHA lookup",
+    hint: "Demo directory lookup (mock data). Fetched details can be edited before saving.",
+    placeholder: "e.g. 12-3456-7890-1234",
+    lookup: "Look up",
+    verified: "ABHA verified",
+    unverified: "Unverified",
+    prefilled: "Details prefilled — review and edit as needed.",
+    error: "Lookup failed. Enter details manually.",
+  },
+  voice: {
+    record: "Record",
+    stop: "Stop",
+    recording: "Recording…",
+    transcribing: "Transcribing…",
+    uploadFallback: "Upload audio",
+    stub: "Stubbed transcription",
+    noRecorder: "Recording not available in this browser — upload an audio file instead.",
+    permissionDenied: "Microphone unavailable or permission denied.",
+    error: "Transcription failed.",
   },
   docs: {
     title: "Records",
@@ -271,6 +335,25 @@ const en: Dictionary = {
     sampleBanner: "Sample snapshot — synthetic demo data, not this patient.",
     viewSample: "Preview sample snapshot",
     hideSample: "Hide sample",
+    grounded: "Grounded",
+    groundingMethod: "Method",
+    groundingUnsupported: "Unsupported lines",
+    unverifiedBySource: "unverified by source",
+    ungroundedTip: "This line could not be matched to a source document.",
+    alertsTitle: "Alerts",
+    medSafetyTitle: "Medication safety",
+    medSafetyNone: "No interactions found in the reference set.",
+    medSafetyVerify: "potential interaction, verify",
+    medSafetySource: "Source",
+    medSafetyAllergy: "⚠ allergy — verify",
+    medSafetyDisclaimer:
+      "Surfaced for the doctor to verify against the patient's full context. Not a treatment recommendation.",
+    languageLabel: "Language",
+    plainToggle: "Patient-friendly",
+    plainTitle: "Patient-friendly summary",
+    plainError: "Couldn't load the plain-language summary.",
+    exportFhir: "Export FHIR",
+    exportPdf: "Export PDF / Print",
   },
 };
 
@@ -344,6 +427,29 @@ const hi: Dictionary = {
     create: "मरीज़ बनाएँ",
     creating: "बनाया जा रहा है…",
     createError: "मरीज़ नहीं बनाया जा सका।",
+    note: "आने का कारण / नोट",
+    notePlaceholder: "मुख्य शिकायत, या माइक से बोलें…",
+  },
+  abha: {
+    title: "ABHA खोज",
+    hint: "डेमो निर्देशिका खोज (मॉक डेटा)। प्राप्त विवरण सहेजने से पहले संपादित किए जा सकते हैं।",
+    placeholder: "उदा. 12-3456-7890-1234",
+    lookup: "खोजें",
+    verified: "ABHA सत्यापित",
+    unverified: "असत्यापित",
+    prefilled: "विवरण भर दिए गए — जाँचें और आवश्यकतानुसार संपादित करें।",
+    error: "खोज विफल रही। विवरण मैन्युअल रूप से दर्ज करें।",
+  },
+  voice: {
+    record: "रिकॉर्ड करें",
+    stop: "रोकें",
+    recording: "रिकॉर्ड हो रहा है…",
+    transcribing: "लिप्यंतरण हो रहा है…",
+    uploadFallback: "ऑडियो अपलोड करें",
+    stub: "स्टब लिप्यंतरण",
+    noRecorder: "इस ब्राउज़र में रिकॉर्डिंग उपलब्ध नहीं — इसके बजाय ऑडियो फ़ाइल अपलोड करें।",
+    permissionDenied: "माइक्रोफ़ोन उपलब्ध नहीं या अनुमति अस्वीकृत।",
+    error: "लिप्यंतरण विफल रहा।",
   },
   docs: {
     title: "रिकॉर्ड",
@@ -401,6 +507,25 @@ const hi: Dictionary = {
     sampleBanner: "नमूना स्नैपशॉट — कृत्रिम डेमो डेटा, यह मरीज़ नहीं।",
     viewSample: "नमूना स्नैपशॉट देखें",
     hideSample: "नमूना छिपाएँ",
+    grounded: "स्रोत-समर्थित",
+    groundingMethod: "विधि",
+    groundingUnsupported: "असमर्थित पंक्तियाँ",
+    unverifiedBySource: "स्रोत से असत्यापित",
+    ungroundedTip: "इस पंक्ति को किसी स्रोत दस्तावेज़ से मिलाया नहीं जा सका।",
+    alertsTitle: "अलर्ट",
+    medSafetyTitle: "दवा सुरक्षा",
+    medSafetyNone: "संदर्भ सूची में कोई परस्पर क्रिया नहीं मिली।",
+    medSafetyVerify: "संभावित परस्पर क्रिया, सत्यापित करें",
+    medSafetySource: "स्रोत",
+    medSafetyAllergy: "⚠ एलर्जी — सत्यापित करें",
+    medSafetyDisclaimer:
+      "डॉक्टर द्वारा मरीज़ के पूर्ण संदर्भ से सत्यापन हेतु दर्शाया गया। यह उपचार की सिफ़ारिश नहीं है।",
+    languageLabel: "भाषा",
+    plainToggle: "सरल भाषा",
+    plainTitle: "मरीज़ के अनुकूल सारांश",
+    plainError: "सरल-भाषा सारांश लोड नहीं हो सका।",
+    exportFhir: "FHIR निर्यात",
+    exportPdf: "PDF निर्यात / प्रिंट",
   },
 };
 
@@ -474,6 +599,29 @@ const ta: Dictionary = {
     create: "நோயாளரை உருவாக்கு",
     creating: "உருவாக்குகிறது…",
     createError: "நோயாளரை உருவாக்க முடியவில்லை.",
+    note: "வருகையின் காரணம் / குறிப்பு",
+    notePlaceholder: "முதன்மை புகார், அல்லது மைக் மூலம் பேசவும்…",
+  },
+  abha: {
+    title: "ABHA தேடல்",
+    hint: "டெமோ அடைவு தேடல் (போலி தரவு). பெறப்பட்ட விவரங்களைச் சேமிப்பதற்கு முன் திருத்தலாம்.",
+    placeholder: "எ.கா. 12-3456-7890-1234",
+    lookup: "தேடு",
+    verified: "ABHA சரிபார்க்கப்பட்டது",
+    unverified: "சரிபார்க்கப்படவில்லை",
+    prefilled: "விவரங்கள் நிரப்பப்பட்டன — சரிபார்த்து தேவைப்பட்டால் திருத்தவும்.",
+    error: "தேடல் தோல்வி. விவரங்களை கைமுறையாக உள்ளிடவும்.",
+  },
+  voice: {
+    record: "பதிவு",
+    stop: "நிறுத்து",
+    recording: "பதிவு செய்கிறது…",
+    transcribing: "எழுத்துப்பெயர்க்கிறது…",
+    uploadFallback: "ஒலி பதிவேற்று",
+    stub: "மாதிரி எழுத்துப்பெயர்ப்பு",
+    noRecorder: "இந்த உலாவியில் பதிவு கிடைக்கவில்லை — பதிலாக ஒலிக் கோப்பைப் பதிவேற்றவும்.",
+    permissionDenied: "மைக்ரோஃபோன் கிடைக்கவில்லை அல்லது அனுமதி மறுக்கப்பட்டது.",
+    error: "எழுத்துப்பெயர்ப்பு தோல்வி.",
   },
   docs: {
     title: "பதிவுகள்",
@@ -531,6 +679,25 @@ const ta: Dictionary = {
     sampleBanner: "மாதிரி ஸ்னாப்ஷாட் — செயற்கை டெமோ தரவு, இந்த நோயாளர் அல்ல.",
     viewSample: "மாதிரி ஸ்னாப்ஷாட்டைக் காண்க",
     hideSample: "மாதிரியை மறை",
+    grounded: "ஆதாரப்பூர்வம்",
+    groundingMethod: "முறை",
+    groundingUnsupported: "ஆதாரமற்ற வரிகள்",
+    unverifiedBySource: "ஆதாரத்தால் சரிபார்க்கப்படவில்லை",
+    ungroundedTip: "இந்த வரியை ஒரு மூல ஆவணத்துடன் பொருத்த முடியவில்லை.",
+    alertsTitle: "எச்சரிக்கைகள்",
+    medSafetyTitle: "மருந்து பாதுகாப்பு",
+    medSafetyNone: "குறிப்பு தொகுப்பில் எந்த தொடர்பும் காணப்படவில்லை.",
+    medSafetyVerify: "சாத்தியமான தொடர்பு, சரிபார்க்கவும்",
+    medSafetySource: "ஆதாரம்",
+    medSafetyAllergy: "⚠ ஒவ்வாமை — சரிபார்",
+    medSafetyDisclaimer:
+      "நோயாளரின் முழு சூழலுடன் மருத்துவர் சரிபார்க்கக் காட்டப்படுகிறது. இது சிகிச்சை பரிந்துரை அல்ல.",
+    languageLabel: "மொழி",
+    plainToggle: "நோயாளர் நட்பு",
+    plainTitle: "நோயாளர் நட்பு சுருக்கம்",
+    plainError: "எளிய மொழி சுருக்கத்தை ஏற்ற முடியவில்லை.",
+    exportFhir: "FHIR ஏற்றுமதி",
+    exportPdf: "PDF ஏற்றுமதி / அச்சிடு",
   },
 };
 
